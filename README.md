@@ -9,21 +9,35 @@ Alle Daten bleiben **nur lokal auf dem iPhone** (im Speicher der Web-App).
 - **Stichpunkte:** Return erzeugt einen neuen Stichpunkt, Rücktaste in einer leeren Zeile löscht ihn.
   Eine Zeile, die mit `#` beginnt, wird zum Thema und damit zur Überschrift im Bericht.
 - **Themen-Vorlage:** deine Standard-Gliederung, festgelegt unter Mehr. Im Termin per Knopf einfügen oder bei neuen Terminen automatisch. Themen, unter denen nichts steht, erscheinen nicht im Bericht.
-- **→ Todo:** macht aus einem Stichpunkt ein Todo, das mit dem Kunden verknüpft ist.
-- **Todos** haben optional:
+- **→ Aufgabe:** macht aus einem Stichpunkt eine Aufgabe, die mit dem Termin und seinem Kunden verknüpft ist.
+- **Aufgaben anlegen**
+  - **Schnellfeld (1-Zeiler)** oben im Bereich „Aufgaben“. Kurzbefehle im Text werden erkannt und unter dem Feld angezeigt, bevor du Return drückst:
+    - `heute`, `morgen`, `übermorgen`, `nächste Woche`, `Freitag`, `bis Fr` / `am Mo`, `12.12.` → Fälligkeit
+      (Kurzformen wie „Fr“ nur nach „bis“ oder „am“, damit „Fr. Müller“ Text bleibt)
+    - `@Einkauf` → Wer (bekannte Namen auch mit Leerzeichen, z. B. `@Hr. Schulz`) – die Aufgabe landet dann unter „Klären“
+    - `#K-10471` → Kundennummer
+    - `!` → wichtig
+    - Beispiel: `Angebot schicken bis Fr #K-10471 @Einkauf !`
+  - **„+“** öffnet das vollständige Formular.
+- **Aufgaben** haben optional:
+  - **Kundennr. und Kunde**: Eine bekannte Nummer ergänzt den Namen und umgekehrt. Aufgaben aus einem Termin übernehmen dessen Kunden automatisch, solange die Felder leer bleiben.
   - **Wer**: Person oder Abteilung, leer bedeutet du selbst.
-  - **Fällig am**
+  - **Fällig am** mit Schnellknöpfen „Heute“, „Morgen“, „Nächste Woche“ und „✕“.
+  - **★ Wichtig**: Diese Aufgaben stehen oben in ihrer Gruppe. Auch direkt in der Liste per Stern umschaltbar.
   - **Ergebnis**: was du in Erfahrung gebracht hast.
-  - **Rückmeldung an Kunden nötig**: Das Todo hat dann zwei Schritte. Der erste Haken bedeutet „geklärt“, der zweite „Kunde informiert“.
-- **Meine Todos** in drei Ansichten:
-  - **Ich:** deine eigenen Todos und Termine, für die noch ein Bericht fehlt.
+  - **Rückmeldung an Kunden nötig**: Die Aufgabe hat dann zwei Schritte. Der erste Haken bedeutet „geklärt“, der zweite „Kunde informiert“.
+- **Kundenstamm:** Paare aus Kundennr. und Name werden gemerkt, sobald du sie bei einer Aufgabe einträgst. Unter Mehr → Kunden kannst du sie bearbeiten oder anlegen.
+  Auch Termine haben eine optionale Kundennr.
+- **Suche** im Bereich „Aufgaben“: nach Text, Kunde, Kundennr., Wer und Ergebnis, über alle drei Ansichten.
+- **Aufgaben** in drei Ansichten:
+  - **Ich:** deine eigenen Aufgaben und Termine, für die noch ein Bericht fehlt. Gruppiert „nach Fälligkeit“ oder „nach Kunde“.
   - **Klären:** nach Person oder Abteilung gruppiert, mit „Liste teilen“.
     Mit **„Angefragt“** merkst du dir, wann du gefragt hast. Nach 7 Tagen ohne Antwort wird der Punkt markiert, mit „Nachgehakt“ beginnt die Frist neu.
     „Liste teilen“ markiert die geteilten Punkte automatisch als angefragt.
   - **Rückmeldung:** geklärte Punkte je Kunde, mit „Antwort-Entwurf“.
 - **Bericht-Entwurf:** gegliederter Text aus Kopfdaten, Themen, Stichpunkten und den vereinbarten Maßnahmen mit Zuständigkeit. Zum Kopieren nach Word oder Mail.
   Nach dem Termin steht der Bericht so lange in deinen Todos, bis du ihn abhakst.
-- **Teilen:** Termin samt Stichpunkten und Todos oder alle offenen Todos als Text an Mail, Notizen, Teams usw.
+- **Teilen:** Termin samt Stichpunkten und Aufgaben oder alle offenen Aufgaben (nach Kunde gruppiert) als Text an Mail, Notizen, Teams usw.
 - **Kalender:** Termin als `.ics`-Datei exportieren.
 
 Die Abstimmung mit anderen läuft bewusst außerhalb der App. Die App ist nur dein persönlicher Überblick.
