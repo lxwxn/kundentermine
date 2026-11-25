@@ -4,12 +4,26 @@ Eine einzelne Web-App (`index.html`). Es gibt kein Backend, keinen Build-Schritt
 Alle Daten bleiben **nur lokal auf dem iPhone** (im Speicher der Web-App).
 
 ## Funktionen
-- **Termine:** Kunde, Datum/Uhrzeit, Ort/Ansprechpartner. Die Liste ist in „anstehend“ und „vergangen“ aufgeteilt und durchsuchbar.
+- **Termine:** Kunde, Beginn/Ende, Ort und Teilnehmer. Die Liste ist in „anstehend“ und „vergangen“ aufgeteilt und durchsuchbar.
+- **Aus Outlook-Einladung übernehmen:** Einladungstext einfügen oder eine `.ics`-Datei wählen. Betreff, Datum, Uhrzeit, Ort und Teilnehmer werden automatisch erkannt.
 - **Stichpunkte:** Return erzeugt einen neuen Stichpunkt, Rücktaste in einer leeren Zeile löscht ihn.
+  Eine Zeile, die mit `#` beginnt, wird zum Thema und damit zur Überschrift im Bericht.
 - **→ Todo:** macht aus einem Stichpunkt ein Todo, das mit dem Kunden verknüpft ist.
-- **Meine Todos:** alle Todos über alle Kunden hinweg, gruppiert nach überfällig, heute, demnächst und ohne Datum.
+- **Todos** haben optional:
+  - **Wer**: Person oder Abteilung, leer bedeutet du selbst.
+  - **Fällig am**
+  - **Ergebnis**: was du in Erfahrung gebracht hast.
+  - **Rückmeldung an Kunden nötig**: Das Todo hat dann zwei Schritte. Der erste Haken bedeutet „geklärt“, der zweite „Kunde informiert“.
+- **Meine Todos** in drei Ansichten:
+  - **Ich:** deine eigenen Todos und Termine, für die noch ein Bericht fehlt.
+  - **Klären:** nach Person oder Abteilung gruppiert, mit „Liste teilen“.
+  - **Rückmeldung:** geklärte Punkte je Kunde, mit „Antwort-Entwurf“.
+- **Bericht-Entwurf:** gegliederter Text aus Kopfdaten, Themen, Stichpunkten und den vereinbarten Maßnahmen mit Zuständigkeit. Zum Kopieren nach Word oder Mail.
+  Nach dem Termin steht der Bericht so lange in deinen Todos, bis du ihn abhakst.
 - **Teilen:** Termin samt Stichpunkten und Todos oder alle offenen Todos als Text an Mail, Notizen, Teams usw.
 - **Kalender:** Termin als `.ics`-Datei exportieren.
+
+Die Abstimmung mit anderen läuft bewusst außerhalb der App. Die App ist nur dein persönlicher Überblick.
 - **Backup:** Export und Import als JSON-Datei. Die App erinnert dich, wenn das letzte Backup länger als 14 Tage zurückliegt.
 
 ## Online stellen (GitHub Pages, kostenlos)

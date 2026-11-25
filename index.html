@@ -22,7 +22,8 @@
     --accent: #1f5f5b;
     --accent-soft: #dcebe9;
     --danger: #b3372b;
-    --warn: #b06a0b;
+    --warn: #9a5a00;
+    --warn-soft: #f6e8d2;
     --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
@@ -36,6 +37,7 @@
       --accent-soft: #1d3634;
       --danger: #ef7a6d;
       --warn: #e5a54b;
+      --warn-soft: #3a2c17;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -46,9 +48,10 @@
     -webkit-text-size-adjust: 100%;
   }
   main { max-width: 640px; margin: 0 auto; padding: 8px 16px 24px; }
-  h1 { font-size: 32px; letter-spacing: -0.02em; margin: 12px 0 14px; }
+  h1 { font-size: 32px; letter-spacing: -0.02em; margin: 12px 0 14px; overflow-wrap: anywhere; }
   h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
-       color: var(--muted); margin: 22px 4px 8px; }
+       color: var(--muted); margin: 22px 4px 8px; display: flex; align-items: center; gap: 8px; min-height: 30px; }
+  h2 .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   h2.overdue { color: var(--danger); }
   button, input, textarea, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
@@ -63,21 +66,31 @@
   .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 52px;
          border-bottom: 1px solid var(--line); }
   .row:last-child { border-bottom: 0; }
-  .row.tap { cursor: pointer; }
+  .tap { cursor: pointer; }
   .row .body { flex: 1; min-width: 0; }
   .row .title { overflow-wrap: anywhere; }
-  .row .meta { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .row .meta { font-size: 14px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
   .meta .late { color: var(--danger); font-weight: 600; }
+  .meta .who { color: var(--accent); font-weight: 600; }
+  .row .result { font-size: 14px; margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--accent); overflow-wrap: anywhere; }
   .chev { color: var(--muted); font-size: 20px; }
   .badge { background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600;
-           border-radius: 999px; padding: 2px 9px; flex: none; }
+           border-radius: 999px; padding: 2px 9px; flex: none; white-space: nowrap; }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
 
   .check { appearance: none; -webkit-appearance: none; width: 26px; height: 26px; flex: none; margin: 0;
            border: 2px solid var(--muted); border-radius: 50%; display: grid; place-items: center; }
+  .check.half { border-color: var(--accent); }
+  .check.half::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
   .check:checked { background: var(--accent); border-color: var(--accent); }
-  .check:checked::after { content: ""; width: 7px; height: 12px; border: solid var(--bg);
+  .check:checked::after { content: ""; width: 7px; height: 12px; border-radius: 0; background: none; border: solid var(--bg);
            border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
   .done .title { text-decoration: line-through; color: var(--muted); }
+
+  .seg { display: flex; background: var(--card); border-radius: 12px; padding: 3px; gap: 3px; margin: 4px 0 12px; }
+  .seg button { flex: 1; border: 0; background: none; padding: 8px 2px; border-radius: 9px; font-size: 15px; color: var(--muted); }
+  .seg button.on { background: var(--accent); color: var(--bg); font-weight: 600; }
+  .seg .n { font-size: 12px; opacity: .8; margin-left: 3px; }
 
   .quickadd { display: flex; gap: 8px; }
   .field, .quickadd input {
@@ -85,21 +98,27 @@
     padding: 12px 14px; outline: none; font-size: 17px;
   }
   .field:focus, .quickadd input:focus { border-color: var(--accent); }
+  input[type="datetime-local"].field, input[type="date"].field { min-height: 50px; -webkit-appearance: none; }
   .search { margin-bottom: 4px; }
 
   .empty { color: var(--muted); text-align: center; padding: 28px 16px; }
   .banner { background: var(--accent-soft); color: var(--text); border-radius: var(--radius);
-            padding: 12px 14px; margin: 8px 0 4px; display: flex; gap: 10px; align-items: center; font-size: 15px; }
+            padding: 12px 14px; margin: 8px 0 12px; display: flex; gap: 10px; align-items: center; font-size: 15px; }
   .banner button { margin-left: auto; flex: none; }
 
   /* Termin-Detail */
   .detail-head { margin: 4px 0 6px; }
   .detail-head .sub { color: var(--muted); }
+  .togglerow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
   .notes .note { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 14px;
                  border-bottom: 1px solid var(--line); min-height: 48px; }
   .notes .note:last-child { border-bottom: 0; }
-  .note .dot { color: var(--muted); flex: none; }
+  .note .dot { color: var(--muted); flex: none; width: 10px; }
   .note input { flex: 1; min-width: 0; border: 0; background: none; outline: none; padding: 12px 0; font-size: 17px; }
+  .note.is-h { background: var(--accent-soft); }
+  .note.is-h input { font-weight: 700; }
+  .note.is-h .dot { visibility: hidden; }
+  .note.is-h .totodo { visibility: hidden; }
   .totodo { border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 8px;
             font-size: 14px; font-weight: 600; padding: 6px 10px; flex: none; }
   .totodo.is-todo { background: none; color: var(--muted); font-weight: 400; }
@@ -110,7 +129,9 @@
          width: 100%; text-align: center; }
   .btn.primary { background: var(--accent); color: var(--bg); }
   .btn.danger { color: var(--danger); }
-  .btn.small { width: auto; padding: 8px 12px; font-size: 15px; }
+  .btn.small { width: auto; padding: 6px 12px; font-size: 14px; text-transform: none; letter-spacing: 0; flex: none; }
+  .btnrow { display: flex; gap: 8px; }
+  .btnrow .btn { flex: 1; }
 
   /* Tab-Leiste */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
@@ -127,17 +148,25 @@
            color: var(--text); border-radius: 18px 18px 0 0; max-height: 92vh; }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   .sheet { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 12px; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; }
-  .sheet-head strong { font-size: 17px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .sheet-head strong { font-size: 17px; text-align: center; }
   .sheet-head button { border: 0; background: none; color: var(--accent); font-size: 17px; padding: 6px 0; }
   .sheet-head .save { font-weight: 600; }
   label.lbl { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+  label.chk { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 12px; padding: 12px 14px; }
   textarea.field { min-height: 80px; resize: vertical; }
+  textarea.report { min-height: 50vh; font-size: 15px; line-height: 1.45; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .linkrow { color: var(--accent); background: var(--card); border-radius: 12px; padding: 12px 14px; border: 0; text-align: left; }
+  details.invite { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; }
+  details.invite summary { color: var(--accent); font-weight: 600; cursor: pointer; }
+  details.invite[open] summary { margin-bottom: 10px; }
+  details.invite .field { background: var(--card); font-size: 15px; }
+  details.invite .btnrow { margin-top: 8px; }
 
   .toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%);
            background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 15px;
-           opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+           opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; }
   .info { font-size: 15px; color: var(--muted); padding: 12px 14px; }
 </style>
@@ -154,6 +183,7 @@
 <dialog id="sheet"></dialog>
 <div class="toast" id="toast"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
+<input type="file" id="icsFile" accept=".ics,text/calendar" hidden>
 
 <script>
 "use strict";
@@ -161,14 +191,32 @@
 /* ---------- Daten ---------- */
 const KEY = "kundentermine-v1";
 const BACKUP_KEY = "kundentermine-lastBackup";
-let db = load();
+const TAB_KEY = "kundentermine-todoTab";
+let db; // wird unten nach den Hilfsfunktionen geladen
 
+function migrate(d) {
+  d.einstellungen = Object.assign({ name: "" }, d.einstellungen);
+  for (const t of d.termine) {
+    t.notizen = t.notizen || [];
+    t.teilnehmer = t.teilnehmer || "";
+    t.ort = t.ort || "";
+    if (!t.ende) t.ende = addHours(t.datum, 3);
+    t.berichtErledigt = !!t.berichtErledigt;
+  }
+  for (const t of d.todos) {
+    t.wer = t.wer || "";
+    t.ergebnis = t.ergebnis || "";
+    t.rueckmeldung = !!t.rueckmeldung;
+    t.geklaert = !!t.geklaert;
+  }
+  return d;
+}
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
-    if (d && Array.isArray(d.termine) && Array.isArray(d.todos)) return d;
+    if (d && Array.isArray(d.termine) && Array.isArray(d.todos)) return migrate(d);
   } catch (e) {}
-  return { termine: [], todos: [] };
+  return migrate({ termine: [], todos: [] });
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -177,34 +225,50 @@ function save() {
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const termin = id => db.termine.find(t => t.id === id);
 const todo = id => db.todos.find(t => t.id === id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 
 /* ---------- Hilfen ---------- */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const pad = n => String(n).padStart(2, "0");
-const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-const nowLocal = () => { const d = new Date(); d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const dateStr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const localStr = d => `${dateStr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const todayStr = () => dateStr(new Date());
+const nowLocal = () => { const d = new Date(); d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0); return localStr(d); };
 const parseLocal = s => { if (!s) return null; const [d, t = "00:00"] = s.split("T"); const [y, m, da] = d.split("-").map(Number);
   const [h, mi] = t.split(":").map(Number); return new Date(y, m - 1, da, h, mi); };
-function fmtDateTime(s) {
-  const d = parseLocal(s); if (!d) return "";
-  return d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) +
-         ", " + d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + " Uhr";
+const addHours = (s, h) => { const d = parseLocal(s); if (!d) return ""; d.setHours(d.getHours() + h); return localStr(d); };
+const fmtTime = d => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+const fmtDay = d => d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+function fmtRange(start, end) {
+  const a = parseLocal(start), b = parseLocal(end); if (!a) return "";
+  if (!b) return `${fmtDay(a)}, ${fmtTime(a)} Uhr`;
+  if (dateStr(a) === dateStr(b)) return `${fmtDay(a)}, ${fmtTime(a)}–${fmtTime(b)} Uhr`;
+  return `${fmtDay(a)}, ${fmtTime(a)} – ${fmtDay(b)}, ${fmtTime(b)} Uhr`;
 }
 function fmtDate(s) {
   if (!s) return "";
-  const t = todayStr();
-  if (s === t) return "heute";
+  if (s === todayStr()) return "heute";
   const tm = new Date(); tm.setDate(tm.getDate() + 1);
-  if (s === `${tm.getFullYear()}-${pad(tm.getMonth() + 1)}-${pad(tm.getDate())}`) return "morgen";
+  if (s === dateStr(tm)) return "morgen";
   return parseLocal(s).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
 }
+const meName = () => db.einstellungen.name.trim() || "ich";
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg; el.classList.add("show");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
 }
+
+/* ---------- Status-Logik ---------- */
+// Ein Todo mit „Rückmeldung an Kunden“ hat zwei Schritte: geklärt → Kunde informiert (= erledigt).
+const isRueck = t => !t.erledigt && t.rueckmeldung && t.geklaert;
+const isKlaeren = t => !t.erledigt && !isRueck(t) && t.wer.trim();
+const isIch = t => !t.erledigt && !isRueck(t) && !t.wer.trim();
+const berichtOffen = t => !t.berichtErledigt && parseLocal(t.datum) < new Date();
+const byDue = (a, b) => (a.faellig || "9").localeCompare(b.faellig || "9") || a.erstellt - b.erstellt;
+const kundeOf = t => (t.terminId && termin(t.terminId)?.kunde) || "Ohne Kunde";
 
 /* ---------- Routing ---------- */
 function route() {
@@ -221,102 +285,157 @@ window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); })
 
 /* ---------- Ansicht: Todos ---------- */
 let showDone = false;
-function todoRow(t, withKunde = true) {
-  const tm = t.terminId && termin(t.terminId);
+let todoTab = store.get(TAB_KEY) || "ich";
+
+function todoRow(t, show = { kunde: true, wer: true }) {
   const late = t.faellig && !t.erledigt && t.faellig < todayStr();
   const meta = [
-    withKunde && tm ? esc(tm.kunde) : "",
-    t.faellig ? `<span class="${late ? "late" : ""}">${late ? "überfällig · " : "bis "}${esc(fmtDate(t.faellig))}</span>` : ""
+    show.kunde && t.terminId && termin(t.terminId) ? esc(kundeOf(t)) : "",
+    show.wer && t.wer.trim() ? `<span class="who">→ ${esc(t.wer)}</span>` : "",
+    t.faellig ? `<span class="${late ? "late" : ""}">${late ? "überfällig · " : "bis "}${esc(fmtDate(t.faellig))}</span>` : "",
+    t.rueckmeldung && !t.erledigt ? (t.geklaert ? "Kunde informieren" : "Rückmeldung an Kunden") : "",
   ].filter(Boolean).join(" · ");
+  const half = !t.erledigt && t.rueckmeldung && t.geklaert;
   return `<div class="row ${t.erledigt ? "done" : ""}">
-    <input type="checkbox" class="check" data-toggle="${t.id}" ${t.erledigt ? "checked" : ""} aria-label="Erledigt">
+    <input type="checkbox" class="check ${half ? "half" : ""}" data-toggle="${t.id}" ${t.erledigt ? "checked" : ""}
+      aria-label="${t.rueckmeldung && !t.geklaert ? "Geklärt" : "Erledigt"}">
     <div class="body tap" data-edit-todo="${t.id}">
       <div class="title">${esc(t.text)}</div>${meta ? `<div class="meta">${meta}</div>` : ""}
+      ${t.ergebnis.trim() ? `<div class="result">${esc(t.ergebnis)}</div>` : ""}
     </div></div>`;
 }
+function groupBy(list, keyFn) {
+  const m = new Map();
+  for (const x of list) { const k = keyFn(x); const key = k.toLowerCase(); if (!m.has(key)) m.set(key, { name: k, items: [] }); m.get(key).items.push(x); }
+  return [...m.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
 function renderTodos(app) {
-  const open = db.todos.filter(t => !t.erledigt);
+  const ich = db.todos.filter(isIch), kl = db.todos.filter(isKlaeren), rm = db.todos.filter(isRueck);
+  const berichte = db.termine.filter(berichtOffen).sort((a, b) => a.datum.localeCompare(b.datum));
   const done = db.todos.filter(t => t.erledigt).sort((a, b) => (b.erledigtAm || 0) - (a.erledigtAm || 0));
-  const today = todayStr();
-  const byDate = (a, b) => (a.faellig || "9").localeCompare(b.faellig || "9") || a.erstellt - b.erstellt;
-  const groups = [
-    ["Überfällig", open.filter(t => t.faellig && t.faellig < today), "overdue"],
-    ["Heute", open.filter(t => t.faellig === today)],
-    ["Demnächst", open.filter(t => t.faellig && t.faellig > today)],
-    ["Ohne Datum", open.filter(t => !t.faellig)],
-  ];
-  let html = `<div class="topbar"><h1>Meine Todos</h1></div>`;
-  html += backupBanner();
-  html += `<form class="quickadd" id="quickadd"><input id="quickText" placeholder="Neues Todo …" enterkeyhint="done" autocomplete="off"></form>`;
-  for (const [name, list, cls] of groups) {
-    if (!list.length) continue;
-    html += `<h2 class="${cls || ""}">${name} · ${list.length}</h2><div class="card">${list.sort(byDate).map(t => todoRow(t)).join("")}</div>`;
+  const tabs = [["ich", "Ich", ich.length + berichte.length], ["klaeren", "Klären", kl.length], ["rueck", "Rückmeldung", rm.length]];
+  let html = `<div class="topbar"><h1>Meine Todos</h1></div>${backupBanner()}
+    <div class="seg">${tabs.map(([k, l, n]) => `<button data-seg="${k}" class="${todoTab === k ? "on" : ""}">${l}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("")}</div>`;
+
+  if (todoTab === "ich") {
+    html += `<form class="quickadd" id="quickadd"><input id="quickText" placeholder="Neues Todo für mich …" enterkeyhint="done" autocomplete="off"></form>`;
+    if (berichte.length) html += `<h2><span class="grow">Bericht schreiben · ${berichte.length}</span></h2><div class="card">${berichte.map(t =>
+      `<div class="row tap" data-open="${t.id}"><div class="body"><div class="title">${esc(t.kunde)}</div>
+       <div class="meta">${esc(fmtRange(t.datum, t.ende))}</div></div><span class="badge warn">Bericht</span><span class="chev">›</span></div>`).join("")}</div>`;
+    const today = todayStr();
+    const groups = [
+      ["Überfällig", ich.filter(t => t.faellig && t.faellig < today), "overdue"],
+      ["Heute", ich.filter(t => t.faellig === today)],
+      ["Demnächst", ich.filter(t => t.faellig && t.faellig > today)],
+      ["Ohne Datum", ich.filter(t => !t.faellig)],
+    ];
+    for (const [name, list, cls] of groups) if (list.length)
+      html += `<h2 class="${cls || ""}"><span class="grow">${name} · ${list.length}</span></h2><div class="card">${list.sort(byDue).map(t => todoRow(t, { kunde: true })).join("")}</div>`;
+    if (!ich.length && !berichte.length) html += `<div class="empty">Nichts zu tun für dich 🎉</div>`;
   }
-  if (!open.length) html += `<div class="empty">Keine offenen Todos 🎉</div>`;
+  if (todoTab === "klaeren") {
+    const gs = groupBy(kl, t => t.wer.trim());
+    gs.forEach((g, i) => html += `<h2><span class="grow">${esc(g.name)} · ${g.items.length}</span><button class="btn small" data-share-wer="${i}">Liste teilen</button></h2>
+      <div class="card">${g.items.sort(byDue).map(t => todoRow(t, { kunde: true })).join("")}</div>`);
+    if (!gs.length) html += `<div class="empty">Nichts mit anderen zu klären.<br><small>Trage bei einem Todo unter „Wer“ eine Person oder Abteilung ein.</small></div>`;
+    else html += `<p class="hint">Haken = geklärt. Bei Todos mit Rückmeldung wandern sie dann zu „Rückmeldung“.</p>`;
+    app._groups = gs;
+  }
+  if (todoTab === "rueck") {
+    const gs = groupBy(rm, kundeOf);
+    gs.forEach((g, i) => html += `<h2><span class="grow">${esc(g.name)} · ${g.items.length}</span><button class="btn small" data-share-kunde="${i}">Antwort-Entwurf</button></h2>
+      <div class="card">${g.items.sort(byDue).map(t => todoRow(t, { kunde: false, wer: true })).join("")}</div>`);
+    if (!gs.length) html += `<div class="empty">Keine Rückmeldungen offen.<br><small>Hier landen geklärte Punkte, die du dem Kunden noch mitteilen musst.</small></div>`;
+    else html += `<p class="hint">Haken = Kunde informiert.</p>`;
+    app._groups = gs;
+  }
+
   if (done.length) {
-    html += `<h2>Erledigt · ${done.length} <button class="btn small" id="toggleDone" style="margin-left:8px">${showDone ? "ausblenden" : "anzeigen"}</button></h2>`;
-    if (showDone) html += `<div class="card">${done.map(t => todoRow(t)).join("")}</div>`;
+    html += `<h2><span class="grow">Erledigt · ${done.length}</span><button class="btn small" id="toggleDone">${showDone ? "ausblenden" : "anzeigen"}</button></h2>`;
+    if (showDone) html += `<div class="card">${done.slice(0, 100).map(t => todoRow(t)).join("")}</div>`;
   }
   app.innerHTML = html;
-  app.querySelector("#quickadd").onsubmit = e => {
+
+  app.querySelectorAll("[data-seg]").forEach(b => b.onclick = () => { todoTab = b.dataset.seg; store.set(TAB_KEY, todoTab); route(); });
+  const qa = app.querySelector("#quickadd");
+  if (qa) qa.onsubmit = e => {
     e.preventDefault();
-    const inp = app.querySelector("#quickText"), text = inp.value.trim();
+    const text = app.querySelector("#quickText").value.trim();
     if (!text) return;
-    db.todos.push({ id: uid(), text, faellig: "", erledigt: false, terminId: null, erstellt: Date.now() });
-    save(); route(); document.getElementById("quickText").focus();
+    db.todos.push(newTodo({ text })); save(); route(); document.getElementById("quickText").focus();
   };
+  app.querySelectorAll("[data-share-wer]").forEach(b => b.onclick = () => {
+    const g = app._groups[b.dataset.shareWer];
+    shareText(`Offene Punkte: ${g.name}`, `Offene Punkte für ${g.name}:\n\n` + g.items.sort(byDue).map(t =>
+      `• ${t.terminId ? kundeOf(t) + ": " : ""}${t.text}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n") + "\n");
+  });
+  app.querySelectorAll("[data-share-kunde]").forEach(b => b.onclick = () => {
+    const g = app._groups[b.dataset.shareKunde];
+    shareText(`Rückmeldung ${g.name}`, `Rückmeldung zu den offenen Punkten aus unserem Termin:\n\n` + g.items.map(t =>
+      `• ${t.text}${t.ergebnis.trim() ? `\n  ${t.ergebnis.trim().replace(/\n/g, "\n  ")}` : ""}`).join("\n\n") + "\n");
+  });
   const tg = app.querySelector("#toggleDone");
   if (tg) tg.onclick = () => { showDone = !showDone; route(); };
 }
+const newTodo = o => Object.assign({ id: uid(), text: "", faellig: "", erledigt: false, terminId: null, erstellt: Date.now(),
+  wer: "", ergebnis: "", rueckmeldung: false, geklaert: false }, o);
 
 /* ---------- Ansicht: Termine ---------- */
 let search = "";
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 function renderTermine(app) {
   const q = search.toLowerCase();
-  const list = db.termine.filter(t => !q || t.kunde.toLowerCase().includes(q) || (t.ort || "").toLowerCase().includes(q));
+  const list = db.termine.filter(t => !q || [t.kunde, t.ort, t.teilnehmer].some(x => (x || "").toLowerCase().includes(q)));
   const upcoming = list.filter(t => parseLocal(t.datum) >= startOfToday()).sort((a, b) => a.datum.localeCompare(b.datum));
   const past = list.filter(t => parseLocal(t.datum) < startOfToday()).sort((a, b) => b.datum.localeCompare(a.datum));
   const row = t => {
     const n = db.todos.filter(x => x.terminId === t.id && !x.erledigt).length;
     return `<div class="row tap" data-open="${t.id}"><div class="body">
       <div class="title">${esc(t.kunde)}</div>
-      <div class="meta">${esc(fmtDateTime(t.datum))}${t.ort ? " · " + esc(t.ort) : ""}</div></div>
-      ${n ? `<span class="badge">${n} offen</span>` : ""}<span class="chev">›</span></div>`;
+      <div class="meta">${esc(fmtRange(t.datum, t.ende))}${t.ort ? " · " + esc(t.ort) : ""}</div></div>
+      ${berichtOffen(t) ? `<span class="badge warn">Bericht</span>` : ""}${n ? `<span class="badge">${n} offen</span>` : ""}<span class="chev">›</span></div>`;
   };
   let html = `<div class="topbar"><h1>Termine</h1><button class="iconbtn" id="newTermin" aria-label="Neuer Termin">+</button></div>
-    <input class="field search" id="search" type="search" placeholder="Kunde oder Ort suchen" value="${esc(search)}">`;
+    <input class="field search" id="search" type="search" placeholder="Kunde, Ort oder Teilnehmer suchen" value="${esc(search)}">`;
   if (upcoming.length) html += `<h2>Heute & anstehend</h2><div class="card">${upcoming.map(row).join("")}</div>`;
   if (past.length) html += `<h2>Vergangen</h2><div class="card">${past.map(row).join("")}</div>`;
-  if (!list.length) html += `<div class="empty">${q ? "Nichts gefunden." : "Noch keine Termine. Tippe auf +, um den ersten Kundentermin anzulegen."}</div>`;
+  if (!list.length) html += `<div class="empty">${q ? "Nichts gefunden." : "Noch keine Termine. Tippe auf +, um den ersten Kundentermin anzulegen – gern direkt aus der Outlook-Einladung."}</div>`;
   app.innerHTML = html;
   app.querySelector("#newTermin").onclick = () => terminSheet();
   const s = app.querySelector("#search");
   s.oninput = () => { search = s.value; const pos = s.selectionStart; route(); const n = document.getElementById("search"); n.focus(); n.setSelectionRange(pos, pos); };
 }
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
 /* ---------- Ansicht: Termin-Detail ---------- */
 function renderTermin(app, id) {
   const t = termin(id);
   const todos = db.todos.filter(x => x.terminId === id).sort((a, b) => a.erledigt - b.erledigt || a.erstellt - b.erstellt);
   if (!t.notizen.length) t.notizen.push({ id: uid(), text: "" });
+  const past = parseLocal(t.datum) < new Date();
   app.innerHTML = `
     <button class="back" onclick="location.hash='#/termine'">‹ Termine</button>
     <div class="topbar detail-head"><h1>${esc(t.kunde)}</h1><button class="btn small" id="editTermin">Bearbeiten</button></div>
-    <div class="sub detail-head">${esc(fmtDateTime(t.datum))}${t.ort ? "<br>" + esc(t.ort) : ""}</div>
+    <div class="sub detail-head">${esc(fmtRange(t.datum, t.ende))}${t.ort ? "<br>" + esc(t.ort) : ""}${t.teilnehmer ? "<br>Teilnehmer: " + esc(t.teilnehmer) : ""}</div>
     <h2>Stichpunkte</h2>
     <div class="card notes" id="notes">${t.notizen.map(noteRow).join("")}</div>
-    <p class="hint">Return = neuer Stichpunkt · „→ Todo“ übernimmt ihn in deine Todo-Liste</p>
+    <p class="hint">Return = neuer Stichpunkt · <b>#</b> am Anfang = Thema (Überschrift im Bericht) · „→ Todo“ übernimmt den Punkt</p>
     <h2>Todos aus diesem Termin</h2>
-    <div class="card" id="terminTodos">${todos.map(x => todoRow(x, false)).join("") || `<div class="info">Noch keine Todos.</div>`}</div>
+    <div class="card" id="terminTodos">${todos.map(x => todoRow(x, { kunde: false, wer: true })).join("") || `<div class="info">Noch keine Todos.</div>`}</div>
+    <div class="actions" style="margin-top:10px"><button class="btn" id="addTodo">+ Todo hinzufügen</button></div>
+    <h2>Bericht</h2>
+    <div class="card"><label class="togglerow"><input type="checkbox" class="check" id="berichtDone" ${t.berichtErledigt ? "checked" : ""}>
+      <div class="body"><div class="title">Bericht erledigt</div>
+      <div class="meta">${t.berichtErledigt ? "Erledigt" : past ? "Steht in deinen Todos, bis du ihn abhakst" : "Erscheint nach dem Termin in deinen Todos"}</div></div></label></div>
     <div class="actions">
-      <button class="btn" id="addTodo">+ Todo hinzufügen</button>
-      <button class="btn primary" id="shareTermin">Termin teilen (Mail, Notizen …)</button>
+      <button class="btn primary" id="bericht">Bericht-Entwurf erstellen</button>
+      <button class="btn" id="shareTermin">Termin teilen (Mail, Notizen …)</button>
       <button class="btn" id="icsTermin">In Kalender übernehmen</button>
       <button class="btn danger" id="delTermin">Termin löschen</button>
     </div>`;
   app.querySelector("#editTermin").onclick = () => terminSheet(t);
   app.querySelector("#addTodo").onclick = () => todoSheet(null, id);
+  app.querySelector("#bericht").onclick = () => berichtSheet(t);
+  app.querySelector("#berichtDone").onchange = e => { t.berichtErledigt = e.target.checked; save(); route(); if (t.berichtErledigt) toast("Bericht erledigt ✓"); };
   app.querySelector("#shareTermin").onclick = () => shareText(`Termin ${t.kunde}`, terminText(t));
   app.querySelector("#icsTermin").onclick = () => shareFile(new Blob([ics(t)], { type: "text/calendar" }), `Termin-${slug(t.kunde)}.ics`);
   app.querySelector("#delTermin").onclick = () => {
@@ -328,15 +447,20 @@ function renderTermin(app, id) {
   };
   wireNotes(app.querySelector("#notes"), t);
 }
+const isHeading = s => /^\s*#/.test(s);
+const headingText = s => s.replace(/^\s*#+\s*/, "");
 function noteRow(n) {
   const isTodo = n.todoId && todo(n.todoId);
-  return `<div class="note" data-note="${n.id}"><span class="dot">•</span>
+  return `<div class="note ${isHeading(n.text) ? "is-h" : ""}" data-note="${n.id}"><span class="dot">•</span>
     <input value="${esc(n.text)}" placeholder="Stichpunkt …" enterkeyhint="next" autocomplete="off" autocapitalize="sentences">
     <button class="totodo ${isTodo ? "is-todo" : ""}" data-totodo="${n.id}">${isTodo ? "✓ Todo" : "→ Todo"}</button></div>`;
 }
 function wireNotes(box, t) {
   const idx = el => t.notizen.findIndex(n => n.id === el.closest(".note").dataset.note);
-  box.addEventListener("input", e => { const i = idx(e.target); t.notizen[i].text = e.target.value; save(); });
+  box.addEventListener("input", e => {
+    const i = idx(e.target); t.notizen[i].text = e.target.value; save();
+    e.target.closest(".note").classList.toggle("is-h", isHeading(e.target.value));
+  });
   box.addEventListener("keydown", e => {
     if (e.target.tagName !== "INPUT") return;
     const i = idx(e.target);
@@ -359,21 +483,148 @@ function wireNotes(box, t) {
     const n = t.notizen.find(x => x.id === b.dataset.totodo);
     if (n.todoId && todo(n.todoId)) { todoSheet(todo(n.todoId)); return; }
     if (!n.text.trim()) { toast("Erst Stichpunkt eintippen"); return; }
-    const td = { id: uid(), text: n.text.trim(), faellig: "", erledigt: false, terminId: t.id, erstellt: Date.now() };
+    const td = newTodo({ text: n.text.trim(), terminId: t.id });
     db.todos.push(td); n.todoId = td.id; save();
-    toast("Als Todo übernommen"); route();
+    toast("Als Todo übernommen – antippen für „Wer“ & Rückmeldung"); route();
   });
 }
 
+/* ---------- Bericht ---------- */
+function berichtText(t) {
+  const L = [`Besuchsbericht: ${t.kunde}`, "", `Datum: ${fmtRange(t.datum, t.ende)}`];
+  if (t.ort) L.push(`Ort: ${t.ort}`);
+  if (t.teilnehmer) L.push(`Teilnehmer: ${t.teilnehmer}`);
+  const sections = []; let cur = null;
+  for (const n of t.notizen) {
+    const s = n.text.trim(); if (!s) continue;
+    if (isHeading(s)) { cur = { title: headingText(s), items: [] }; sections.push(cur); }
+    else { if (!cur) { cur = { title: null, items: [] }; sections.push(cur); } cur.items.push(s); }
+  }
+  const withTitles = sections.filter(s => s.title);
+  if (sections.length) {
+    L.push("", withTitles.length ? "Besprochene Themen" : "Gesprächsinhalte");
+    let nr = 0;
+    for (const s of sections) {
+      L.push("");
+      if (s.title) L.push(`${++nr}. ${s.title}`);
+      else if (withTitles.length) L.push("Allgemein");
+      s.items.forEach(i => L.push(`- ${i}`));
+    }
+  }
+  const todos = db.todos.filter(x => x.terminId === t.id).sort((a, b) => a.erstellt - b.erstellt);
+  if (todos.length) {
+    L.push("", "Vereinbarte Maßnahmen", "");
+    for (const x of todos) {
+      L.push(`- ${x.text} – Zuständig: ${x.wer.trim() || meName()}${x.faellig ? `, bis ${parseLocal(x.faellig).toLocaleDateString("de-DE")}` : ""}${x.erledigt ? " (erledigt)" : ""}`);
+      if (x.ergebnis.trim()) L.push(`  Ergebnis: ${x.ergebnis.trim().replace(/\n/g, "\n  ")}`);
+    }
+  }
+  return L.join("\n") + "\n";
+}
+function berichtSheet(t) {
+  const form = openSheet(`
+    <div class="sheet-head"><button type="button" data-cancel>Schließen</button><strong>Bericht-Entwurf</strong><button class="save">Teilen</button></div>
+    <textarea class="field report" name="txt">${esc(berichtText(t))}</textarea>
+    <div class="btnrow"><button type="button" class="btn" data-copy>Kopieren</button></div>
+    <p class="hint">Text in Word oder Mail einfügen und ausformulieren. Änderungen hier werden nicht gespeichert.</p>`,
+    f => { shareText(`Besuchsbericht ${t.kunde}`, f.txt.value); return false; });
+  form.querySelector("[data-copy]").onclick = async () => {
+    try { await navigator.clipboard.writeText(form.txt.value); toast("Bericht kopiert"); }
+    catch (e) { form.txt.select(); toast("Text markiert – jetzt kopieren"); }
+  };
+}
+
+/* ---------- Outlook-Einladung lesen ---------- */
+const MONATE = { jan: 1, januar: 1, january: 1, feb: 2, februar: 2, february: 2, mär: 3, mrz: 3, märz: 3, maerz: 3, mar: 3, march: 3,
+  apr: 4, april: 4, mai: 5, may: 5, jun: 6, juni: 6, june: 6, jul: 7, juli: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, okt: 10, oct: 10, oktober: 10, october: 10, nov: 11, november: 11, dez: 12, dec: 12, dezember: 12, december: 12 };
+const PREFIX = /^\s*((WG|FW|FWD|AW|RE|Einladung|Invitation|Aktualisiert|Updated|Updated invitation|Akzeptiert|Accepted)\s*:\s*)+/i;
+function parseInvite(raw) {
+  const text = String(raw || "").replace(/\r\n?/g, "\n");
+  if (/BEGIN:VCALENDAR|BEGIN:VEVENT/.test(text)) return parseIcs(text);
+  const r = {};
+  const line = re => { const m = text.match(re); return m ? m[m.length - 1].trim() : ""; };
+  r.kunde = line(/^\s*(Betreff|Subject|Titel|Title)\s*:\s*(.+)$/im);
+  r.ort = line(/^\s*(Wo|Ort|Where|Location|Raum)\s*:\s*(.+)$/im);
+  // Nur echte Teilnehmerzeilen – „An:“ einer weitergeleiteten Mail wärst meist du selbst
+  const tn = [...text.matchAll(/^\s*(Erforderlich|Optional|Required|Teilnehmer|Attendees)\s*:\s*(.+)$/gim)].map(m => m[2]).join(";");
+  if (tn) r.teilnehmer = cleanNames(tn.split(/[;\n]/));
+  // Datum/Zeit: zuerst in „Wann:“-Zeile suchen, sonst im Text ohne Sendedatum-Zeilen
+  const whenLine = line(/^\s*(Wann|When)\s*:\s*(.+)$/im) || line(/^\s*(Beginn|Start|Zeit|Time)\s*:\s*(.+)$/im);
+  const body = whenLine || text.split("\n").filter(l => !/^\s*(Gesendet|Sent|Von|From|Datum|Date)\s*:/i.test(l)).join("\n");
+  const dt = findDateTime(body);
+  if (dt) Object.assign(r, dt);
+  if (!r.kunde) {
+    const first = text.split("\n").map(s => s.trim()).find(s => s && !/:\s/.test(s.slice(0, 20)) && !findDateTime(s));
+    if (first) r.kunde = first;
+  }
+  if (r.kunde) r.kunde = r.kunde.replace(PREFIX, "").trim();
+  return r;
+}
+function findDateTime(s) {
+  s = s.replace(/\((UTC|GMT)[^)]*\)/gi, " ");
+  const cands = [];
+  let m;
+  if ((m = /(\d{1,2})\.\s*([A-Za-zÄäÖöÜü]{3,9})\.?\s+(\d{4})/.exec(s)) && MONATE[m[2].toLowerCase()])
+    cands.push({ i: m.index, len: m[0].length, y: +m[3], mo: MONATE[m[2].toLowerCase()], d: +m[1] });
+  if ((m = /\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})/.exec(s)) && MONATE[m[1].toLowerCase()])
+    cands.push({ i: m.index, len: m[0].length, y: +m[3], mo: MONATE[m[1].toLowerCase()], d: +m[2] });
+  if ((m = /\b(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})\b/.exec(s)))
+    cands.push({ i: m.index, len: m[0].length, y: m[3].length === 2 ? 2000 + +m[3] : +m[3], mo: +m[2], d: +m[1] });
+  if ((m = /\b(\d{4})-(\d{2})-(\d{2})/.exec(s)))
+    cands.push({ i: m.index, len: m[0].length, y: +m[1], mo: +m[2], d: +m[3] });
+  if (!cands.length) return null;
+  const c = cands.sort((a, b) => a.i - b.i)[0];
+  if (c.mo < 1 || c.mo > 12 || c.d < 1 || c.d > 31) return null;
+  const rest = s.slice(c.i + c.len);
+  const times = [...rest.matchAll(/(\d{1,2})[:.](\d{2})(?!\.\d)\s*(a\.?m\.?|p\.?m\.?)?/gi)].slice(0, 2).map(t => {
+    let h = +t[1]; const ap = (t[3] || "").toLowerCase().replace(/\./g, "");
+    if (ap === "pm" && h < 12) h += 12; if (ap === "am" && h === 12) h = 0;
+    return h <= 23 && +t[2] <= 59 ? `${pad(h)}:${t[2]}` : null;
+  }).filter(Boolean);
+  const day = `${c.y}-${pad(c.mo)}-${pad(c.d)}`;
+  const datum = `${day}T${times[0] || "09:00"}`;
+  let ende = times[1] ? `${day}T${times[1]}` : addHours(datum, 3);
+  if (ende <= datum) ende = addHours(datum, 3);
+  return { datum, ende, ohneZeit: !times.length };
+}
+function cleanNames(parts) {
+  const seen = new Set();
+  const me = (db.einstellungen.name || "").trim().toLowerCase();
+  if (me) seen.add(me);
+  return parts.map(p => p.replace(/<[^>]*>/g, "").replace(/\S+@\S+/g, "").replace(/["']/g, "").trim())
+    .filter(p => p && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase())).join("; ");
+}
+function parseIcs(text) {
+  const t = text.replace(/\n[ \t]/g, "");
+  const ev = (t.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/) || [t])[0];
+  const prop = name => { const m = ev.match(new RegExp(`^${name}(;[^:\\n]*)?:(.*)$`, "m")); return m ? unescIcs(m[2].trim()) : ""; };
+  const dt = name => {
+    const m = ev.match(new RegExp(`^${name}(;[^:\\n]*)?:(\\d{8})(T(\\d{4})(\\d{2})?(Z)?)?`, "m"));
+    if (!m) return "";
+    const y = +m[2].slice(0, 4), mo = +m[2].slice(4, 6), d = +m[2].slice(6, 8);
+    if (!m[4]) return `${y}-${pad(mo)}-${pad(d)}T09:00`;
+    const h = +m[4].slice(0, 2), mi = +m[4].slice(2, 4);
+    return m[6] ? localStr(new Date(Date.UTC(y, mo - 1, d, h, mi))) : `${y}-${pad(mo)}-${pad(d)}T${pad(h)}:${pad(mi)}`;
+  };
+  const names = [...ev.matchAll(/^ATTENDEE[^\n]*?CN=("?)([^";:\n]+)\1/gm)].map(m => m[2]);
+  const r = { kunde: prop("SUMMARY").replace(PREFIX, "").trim(), ort: prop("LOCATION"), datum: dt("DTSTART"), ende: dt("DTEND"), teilnehmer: cleanNames(names) };
+  if (r.datum && (!r.ende || r.ende <= r.datum)) r.ende = addHours(r.datum, 3);
+  return r;
+}
+const unescIcs = s => s.replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "$1");
+
 /* ---------- Ansicht: Mehr ---------- */
 function renderMehr(app) {
-  const last = localStorage.getItem(BACKUP_KEY);
+  const last = store.get(BACKUP_KEY);
   const open = db.todos.filter(t => !t.erledigt).length;
   app.innerHTML = `<h1>Mehr</h1>
     <h2>Mitnehmen</h2>
     <div class="actions" style="margin-top:0">
       <button class="btn primary" id="shareOpen">Alle offenen Todos teilen (${open})</button>
     </div>
+    <h2>Für Berichte</h2>
+    <label class="lbl"><input class="field" id="myName" placeholder="Dein Name (statt „ich“ bei Zuständig)" value="${esc(db.einstellungen.name)}" autocomplete="name"></label>
     <h2>Datensicherung</h2>
     <div class="card"><div class="info">Deine Daten liegen nur auf diesem iPhone. Sichere sie regelmäßig, z. B. in „Dateien“ oder per Mail an dich.<br>
       Letzte Sicherung: <strong>${last ? new Date(+last).toLocaleDateString("de-DE") : "noch nie"}</strong></div></div>
@@ -387,24 +638,25 @@ function renderMehr(app) {
     <div class="card"><div class="info">${db.termine.length} Termine · ${db.todos.length} Todos (${open} offen)</div></div>
     <div class="actions"><button class="btn danger" id="wipe">Alle Daten löschen</button></div>`;
   app.querySelector("#shareOpen").onclick = () => shareText("Offene Todos", openTodosText());
+  app.querySelector("#myName").onchange = e => { db.einstellungen.name = e.target.value.trim(); save(); toast("Gespeichert"); };
   app.querySelector("#backup").onclick = doBackup;
   app.querySelector("#restore").onclick = () => document.getElementById("importFile").click();
   app.querySelector("#wipe").onclick = () => {
     if (!confirm("Wirklich ALLE Termine und Todos löschen? Das kann nicht rückgängig gemacht werden.")) return;
-    db = { termine: [], todos: [] }; save(); route(); toast("Alle Daten gelöscht");
+    db = migrate({ termine: [], todos: [] }); save(); route(); toast("Alle Daten gelöscht");
   };
 }
 function backupBanner() {
   if (!db.termine.length && !db.todos.length) return "";
-  const last = +localStorage.getItem(BACKUP_KEY) || 0;
+  const last = +store.get(BACKUP_KEY) || 0;
   if (Date.now() - last < 14 * 864e5) return "";
   return `<div class="banner">💾 ${last ? "Letzte Sicherung ist über 14 Tage her." : "Noch keine Datensicherung."}
     <button class="btn small" onclick="doBackup()">Sichern</button></div>`;
 }
 async function doBackup() {
-  const blob = new Blob([JSON.stringify({ app: "kundentermine", version: 1, exportiert: new Date().toISOString(), ...db }, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ app: "kundentermine", version: 2, exportiert: new Date().toISOString(), ...db }, null, 2)], { type: "application/json" });
   const ok = await shareFile(blob, `Kundentermine-Backup-${todayStr()}.json`);
-  if (ok) { localStorage.setItem(BACKUP_KEY, Date.now()); route(); }
+  if (ok) { store.set(BACKUP_KEY, Date.now()); route(); }
 }
 document.getElementById("importFile").onchange = async e => {
   const f = e.target.files[0]; e.target.value = "";
@@ -413,7 +665,7 @@ document.getElementById("importFile").onchange = async e => {
     const d = JSON.parse(await f.text());
     if (!Array.isArray(d.termine) || !Array.isArray(d.todos)) throw new Error();
     if (!confirm(`Backup vom ${d.exportiert ? new Date(d.exportiert).toLocaleDateString("de-DE") : "?"} laden?\n${d.termine.length} Termine, ${d.todos.length} Todos.\nDie aktuellen Daten werden ersetzt.`)) return;
-    db = { termine: d.termine, todos: d.todos }; save(); route(); toast("Backup wiederhergestellt");
+    db = migrate({ termine: d.termine, todos: d.todos, einstellungen: d.einstellungen }); save(); route(); toast("Backup wiederhergestellt");
   } catch (err) { toast("Keine gültige Backup-Datei"); }
 };
 
@@ -421,17 +673,16 @@ document.getElementById("importFile").onchange = async e => {
 function terminText(t) {
   const notes = t.notizen.filter(n => n.text.trim());
   const todos = db.todos.filter(x => x.terminId === t.id);
-  let s = `Kundentermin: ${t.kunde}\n${fmtDateTime(t.datum)}${t.ort ? "\n" + t.ort : ""}\n`;
-  if (notes.length) s += `\nStichpunkte:\n${notes.map(n => "• " + n.text.trim()).join("\n")}\n`;
-  if (todos.length) s += `\nTodos:\n${todos.map(x => `${x.erledigt ? "☑" : "☐"} ${x.text}${x.faellig ? ` (bis ${fmtDate(x.faellig)})` : ""}`).join("\n")}\n`;
+  let s = `Kundentermin: ${t.kunde}\n${fmtRange(t.datum, t.ende)}${t.ort ? "\n" + t.ort : ""}${t.teilnehmer ? "\nTeilnehmer: " + t.teilnehmer : ""}\n`;
+  if (notes.length) s += `\nStichpunkte:\n${notes.map(n => isHeading(n.text) ? `\n${headingText(n.text.trim())}:` : "• " + n.text.trim()).join("\n")}\n`;
+  if (todos.length) s += `\nTodos:\n${todos.map(x => `${x.erledigt ? "☑" : "☐"} ${x.text}${x.wer.trim() ? ` → ${x.wer.trim()}` : ""}${x.faellig ? ` (bis ${fmtDate(x.faellig)})` : ""}`).join("\n")}\n`;
   return s;
 }
 function openTodosText() {
-  const open = db.todos.filter(t => !t.erledigt).sort((a, b) => (a.faellig || "9").localeCompare(b.faellig || "9"));
-  const groups = new Map();
-  for (const t of open) { const k = (t.terminId && termin(t.terminId)?.kunde) || "Allgemein"; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  const open = db.todos.filter(t => !t.erledigt).sort(byDue);
   let s = `Offene Todos (Stand ${new Date().toLocaleDateString("de-DE")})\n`;
-  for (const [k, list] of groups) s += `\n${k}:\n${list.map(t => `☐ ${t.text}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n")}\n`;
+  for (const g of groupBy(open, kundeOf))
+    s += `\n${g.name}:\n${g.items.map(t => `☐ ${t.text}${t.wer.trim() ? ` → ${t.wer.trim()}` : ""}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n")}\n`;
   return s;
 }
 async function shareText(title, text) {
@@ -456,11 +707,10 @@ async function shareFile(blob, name) {
 const slug = s => s.replace(/[^\wäöüÄÖÜß-]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "Termin";
 function ics(t) {
   const e = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
-  const d = parseLocal(t.datum);
   const f = x => `${x.getFullYear()}${pad(x.getMonth() + 1)}${pad(x.getDate())}T${pad(x.getHours())}${pad(x.getMinutes())}00`;
-  const end = new Date(d.getTime() + 60 * 60000);
+  const start = parseLocal(t.datum), end = parseLocal(t.ende) || new Date(start.getTime() + 3 * 36e5);
   const now = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
-  const desc = t.notizen.filter(n => n.text.trim()).map(n => "• " + n.text.trim()).join("\n");
+  const desc = [t.teilnehmer ? "Teilnehmer: " + t.teilnehmer : "", ...t.notizen.filter(n => n.text.trim()).map(n => "• " + n.text.trim())].filter(Boolean).join("\n");
   // Zeilen nach max. 73 Byte (UTF-8) falten, ohne Zeichen zu zerteilen
   const enc = new TextEncoder();
   const fold = line => { let out = "", cur = "", n = 0;
@@ -469,7 +719,7 @@ function ics(t) {
       cur += ch; n += b; }
     return out + cur; };
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Kundentermine//DE", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
-    `UID:${t.id}@kundentermine`, `DTSTAMP:${now}`, `DTSTART:${f(d)}`, `DTEND:${f(end)}`,
+    `UID:${t.id}@kundentermine`, `DTSTAMP:${now}`, `DTSTART:${f(start)}`, `DTEND:${f(end)}`,
     `SUMMARY:${e("Kundentermin: " + t.kunde)}`, t.ort ? `LOCATION:${e(t.ort)}` : "",
     desc ? `DESCRIPTION:${e(desc)}` : "", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).map(fold).join("\r\n") + "\r\n";
 }
@@ -483,42 +733,90 @@ function openSheet(html, onSave) {
   form.querySelector("[data-cancel]").onclick = () => sheet.close();
   form.onsubmit = e => { e.preventDefault(); if (onSave(form) !== false) sheet.close(); };
   sheet.showModal();
+  sheet.scrollTop = 0;
   return form;
 }
 function terminSheet(t) {
   const form = openSheet(`
     <div class="sheet-head"><button type="button" data-cancel>Abbrechen</button><strong>${t ? "Termin bearbeiten" : "Neuer Termin"}</strong><button class="save">Sichern</button></div>
-    <label class="lbl">Kunde<input class="field" name="kunde" required value="${esc(t?.kunde)}" autocomplete="off" autocapitalize="words"></label>
-    <label class="lbl">Datum & Uhrzeit<input class="field" name="datum" type="datetime-local" required value="${esc(t?.datum || nowLocal())}"></label>
-    <label class="lbl">Ort / Ansprechpartner (optional)<input class="field" name="ort" value="${esc(t?.ort)}" autocomplete="off"></label>`,
+    ${t ? "" : `<details class="invite" open><summary>Aus Outlook-Einladung übernehmen</summary>
+      <textarea class="field" name="invite" rows="3" placeholder="Einladungstext hier einfügen (Betreff, Wann, Wo …)"></textarea>
+      <div class="btnrow"><button type="button" class="btn small" data-paste>Aus Zwischenablage</button><button type="button" class="btn small" data-icsfile>.ics-Datei wählen</button></div>
+    </details>`}
+    <label class="lbl">Kunde / Betreff<input class="field" name="kunde" required value="${esc(t?.kunde)}" autocomplete="off" autocapitalize="words"></label>
+    <label class="lbl">Beginn<input class="field" name="datum" type="datetime-local" required value="${esc(t?.datum || nowLocal())}"></label>
+    <label class="lbl">Ende<input class="field" name="ende" type="datetime-local" required value="${esc(t?.ende || addHours(nowLocal(), 3))}"></label>
+    <label class="lbl">Ort (optional)<input class="field" name="ort" value="${esc(t?.ort)}" autocomplete="off"></label>
+    <label class="lbl">Teilnehmer (optional)<input class="field" name="teilnehmer" value="${esc(t?.teilnehmer)}" placeholder="z. B. Hr. Schulz (GF); Fr. Lee (IT)" autocomplete="off"></label>`,
     f => {
-      const v = { kunde: f.kunde.value.trim(), datum: f.datum.value, ort: f.ort.value.trim() };
+      const v = { kunde: f.kunde.value.trim(), datum: f.datum.value, ende: f.ende.value, ort: f.ort.value.trim(), teilnehmer: f.teilnehmer.value.trim() };
       if (!v.kunde || !v.datum) return false;
+      if (!v.ende || v.ende <= v.datum) v.ende = addHours(v.datum, 3);
       if (t) { Object.assign(t, v); save(); route(); }
-      else { const n = { id: uid(), ...v, notizen: [{ id: uid(), text: "" }], erstellt: Date.now() };
+      else { const n = { id: uid(), ...v, notizen: [{ id: uid(), text: "" }], berichtErledigt: false, erstellt: Date.now() };
         db.termine.push(n); save(); location.hash = `#/termin/${n.id}`;
         setTimeout(() => document.querySelector("#notes input")?.focus(), 50); }
     });
-  if (!t) form.kunde.focus();
+  // Ende folgt dem Beginn (+3 h), solange es nicht von Hand geändert wurde
+  let endTouched = !!t;
+  form.ende.addEventListener("input", () => endTouched = true);
+  form.datum.addEventListener("input", () => { if (!endTouched) form.ende.value = addHours(form.datum.value, 3); });
+  if (t) return;
+  const apply = raw => {
+    const r = parseInvite(raw);
+    if (!r.datum && !r.kunde) { toast("In dem Text wurde kein Termin erkannt"); return; }
+    if (r.kunde) form.kunde.value = r.kunde;
+    if (r.datum) { form.datum.value = r.datum; form.ende.value = r.ende; endTouched = true; }
+    if (r.ort) form.ort.value = r.ort;
+    if (r.teilnehmer) form.teilnehmer.value = r.teilnehmer;
+    form.querySelector("details").open = false;
+    toast(r.datum ? (r.ohneZeit ? "Übernommen – Uhrzeit bitte prüfen" : "Übernommen – bitte kurz prüfen") : "Datum nicht erkannt – bitte eintragen");
+  };
+  form.invite.addEventListener("paste", () => setTimeout(() => apply(form.invite.value), 0));
+  form.invite.addEventListener("change", () => apply(form.invite.value));
+  form.querySelector("[data-paste]").onclick = async () => {
+    try { const txt = await navigator.clipboard.readText(); form.invite.value = txt; apply(txt); }
+    catch (e) { form.invite.focus(); toast("Bitte lange ins Feld tippen → Einsetzen"); }
+  };
+  const icsInput = document.getElementById("icsFile");
+  form.querySelector("[data-icsfile]").onclick = () => {
+    icsInput.onchange = async () => { const f = icsInput.files[0]; icsInput.value = ""; if (f) apply(await f.text()); };
+    icsInput.click();
+  };
 }
 function todoSheet(t, terminId) {
   const tm = termin(t?.terminId || terminId);
+  const werList = [...new Set(db.todos.map(x => x.wer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
   const form = openSheet(`
     <div class="sheet-head"><button type="button" data-cancel>Abbrechen</button><strong>${t ? "Todo" : "Neues Todo"}</strong><button class="save">Sichern</button></div>
-    <label class="lbl">Was ist zu tun?<textarea class="field" name="text" required>${esc(t?.text)}</textarea></label>
-    <label class="lbl">Fällig am (optional)<input class="field" name="faellig" type="date" value="${esc(t?.faellig)}"></label>
-    ${tm ? `<button type="button" class="linkrow" data-goto>Kunde: ${esc(tm.kunde)} · ${esc(fmtDate(tm.datum.slice(0, 10)))} ›</button>` : ""}
+    <label class="lbl">Was ist zu tun?<textarea class="field" name="text" required rows="2">${esc(t?.text)}</textarea></label>
+    <div class="two">
+      <label class="lbl">Wer / Abteilung<input class="field" name="wer" list="werList" value="${esc(t?.wer)}" placeholder="leer = ich" autocomplete="off" autocapitalize="words"></label>
+      <label class="lbl">Fällig am<input class="field" name="faellig" type="date" value="${esc(t?.faellig)}"></label>
+    </div>
+    <datalist id="werList">${werList.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
+    <label class="chk"><input type="checkbox" class="check" name="rueckmeldung" ${t?.rueckmeldung ? "checked" : ""}>
+      <span>Rückmeldung an Kunden nötig</span></label>
+    <label class="chk" data-geklaert style="${t?.rueckmeldung ? "" : "display:none"}"><input type="checkbox" class="check" name="geklaert" ${t?.geklaert ? "checked" : ""}>
+      <span>Geklärt – Kunde muss noch informiert werden</span></label>
+    <label class="lbl">Ergebnis / Antwort<textarea class="field" name="ergebnis" rows="2" placeholder="Was hast du in Erfahrung gebracht?">${esc(t?.ergebnis)}</textarea></label>
+    ${tm ? `<button type="button" class="linkrow" data-goto>Termin: ${esc(tm.kunde)} · ${esc(fmtDate(tm.datum.slice(0, 10)))} ›</button>` : ""}
     ${t ? `<button type="button" class="btn danger" data-del>Todo löschen</button>` : ""}`,
     f => {
-      const v = { text: f.text.value.trim(), faellig: f.faellig.value };
+      const v = { text: f.text.value.trim(), wer: f.wer.value.trim(), faellig: f.faellig.value, ergebnis: f.ergebnis.value.trim(),
+                  rueckmeldung: f.rueckmeldung.checked, geklaert: f.rueckmeldung.checked && f.geklaert.checked };
       if (!v.text) return false;
       if (t) Object.assign(t, v);
-      else db.todos.push({ id: uid(), ...v, erledigt: false, terminId: terminId || null, erstellt: Date.now() });
+      else db.todos.push(newTodo({ ...v, terminId: terminId || null }));
       save(); route();
     });
+  form.rueckmeldung.onchange = () => form.querySelector("[data-geklaert]").style.display = form.rueckmeldung.checked ? "" : "none";
   form.querySelector("[data-goto]")?.addEventListener("click", () => { sheet.close(); location.hash = `#/termin/${tm.id}`; });
   form.querySelector("[data-del]")?.addEventListener("click", () => {
-    db.todos = db.todos.filter(x => x.id !== t.id); save(); sheet.close(); route(); toast("Todo gelöscht");
+    if (!confirm("Todo löschen?")) return;
+    db.todos = db.todos.filter(x => x.id !== t.id);
+    db.termine.forEach(tt => tt.notizen.forEach(n => { if (n.todoId === t.id) n.todoId = null; }));
+    save(); sheet.close(); route(); toast("Todo gelöscht");
   });
   if (!t) form.text.focus();
 }
@@ -532,14 +830,22 @@ document.getElementById("app").addEventListener("click", e => {
 });
 document.getElementById("app").addEventListener("change", e => {
   const id = e.target.dataset.toggle; if (!id) return;
-  const t = todo(id); t.erledigt = e.target.checked; t.erledigtAm = t.erledigt ? Date.now() : null; save();
-  if (t.erledigt) toast("Erledigt ✓");
-  setTimeout(route, t.erledigt ? 350 : 0);
+  const t = todo(id);
+  if (e.target.checked && t.rueckmeldung && !t.geklaert) {
+    t.geklaert = true;
+    toast("Geklärt – jetzt unter „Rückmeldung“");
+  } else {
+    t.erledigt = e.target.checked; t.erledigtAm = t.erledigt ? Date.now() : null;
+    if (t.erledigt) toast(t.rueckmeldung ? "Kunde informiert ✓" : "Erledigt ✓");
+  }
+  save();
+  setTimeout(route, e.target.checked ? 350 : 0);
 });
 
 /* Daten aus anderem Tab/Fenster übernehmen */
 window.addEventListener("storage", e => { if (e.key === KEY) { db = load(); route(); } });
 
+db = load();
 route();
 </script>
 </body>
