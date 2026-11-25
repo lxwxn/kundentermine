@@ -8,6 +8,7 @@ Alle Daten bleiben **nur lokal auf dem iPhone** (im Speicher der Web-App).
 - **Aus Outlook-Einladung übernehmen:** Einladungstext einfügen oder eine `.ics`-Datei wählen. Betreff, Datum, Uhrzeit, Ort und Teilnehmer werden automatisch erkannt.
 - **Stichpunkte:** Return erzeugt einen neuen Stichpunkt, Rücktaste in einer leeren Zeile löscht ihn.
   Eine Zeile, die mit `#` beginnt, wird zum Thema und damit zur Überschrift im Bericht.
+- **Themen-Vorlage:** deine Standard-Gliederung, festgelegt unter Mehr. Im Termin per Knopf einfügen oder bei neuen Terminen automatisch. Themen, unter denen nichts steht, erscheinen nicht im Bericht.
 - **→ Todo:** macht aus einem Stichpunkt ein Todo, das mit dem Kunden verknüpft ist.
 - **Todos** haben optional:
   - **Wer**: Person oder Abteilung, leer bedeutet du selbst.
@@ -17,6 +18,8 @@ Alle Daten bleiben **nur lokal auf dem iPhone** (im Speicher der Web-App).
 - **Meine Todos** in drei Ansichten:
   - **Ich:** deine eigenen Todos und Termine, für die noch ein Bericht fehlt.
   - **Klären:** nach Person oder Abteilung gruppiert, mit „Liste teilen“.
+    Mit **„Angefragt“** merkst du dir, wann du gefragt hast. Nach 7 Tagen ohne Antwort wird der Punkt markiert, mit „Nachgehakt“ beginnt die Frist neu.
+    „Liste teilen“ markiert die geteilten Punkte automatisch als angefragt.
   - **Rückmeldung:** geklärte Punkte je Kunde, mit „Antwort-Entwurf“.
 - **Bericht-Entwurf:** gegliederter Text aus Kopfdaten, Themen, Stichpunkten und den vereinbarten Maßnahmen mit Zuständigkeit. Zum Kopieren nach Word oder Mail.
   Nach dem Termin steht der Bericht so lange in deinen Todos, bis du ihn abhakst.

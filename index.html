@@ -72,6 +72,9 @@
   .row .meta { font-size: 14px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
   .meta .late { color: var(--danger); font-weight: 600; }
   .meta .who { color: var(--accent); font-weight: 600; }
+  .meta .stale { color: var(--warn); font-weight: 600; }
+  .row .ask { background: var(--accent-soft); }
+  .banner.warn { background: var(--warn-soft); }
   .row .result { font-size: 14px; margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--accent); overflow-wrap: anywhere; }
   .chev { color: var(--muted); font-size: 20px; }
   .badge { background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600;
@@ -132,6 +135,7 @@
   .btn.small { width: auto; padding: 6px 12px; font-size: 14px; text-transform: none; letter-spacing: 0; flex: none; }
   .btnrow { display: flex; gap: 8px; }
   .btnrow .btn { flex: 1; }
+  .btnrow .btn.small.fit { flex: none; padding: 0 16px; }
 
   /* Tab-Leiste */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
@@ -194,8 +198,9 @@ const BACKUP_KEY = "kundentermine-lastBackup";
 const TAB_KEY = "kundentermine-todoTab";
 let db; // wird unten nach den Hilfsfunktionen geladen
 
+const VORLAGE_STANDARD = "Ausgangslage\nAnforderungen\nAngebot / Preise\nNächste Schritte";
 function migrate(d) {
-  d.einstellungen = Object.assign({ name: "" }, d.einstellungen);
+  d.einstellungen = Object.assign({ name: "", vorlage: VORLAGE_STANDARD, vorlageAuto: false }, d.einstellungen);
   for (const t of d.termine) {
     t.notizen = t.notizen || [];
     t.teilnehmer = t.teilnehmer || "";
@@ -208,6 +213,7 @@ function migrate(d) {
     t.ergebnis = t.ergebnis || "";
     t.rueckmeldung = !!t.rueckmeldung;
     t.geklaert = !!t.geklaert;
+    t.angefragtAm = t.angefragtAm || ""; // zuletzt angefragt/nachgehakt (YYYY-MM-DD)
   }
   return d;
 }
@@ -268,6 +274,14 @@ const isKlaeren = t => !t.erledigt && !isRueck(t) && t.wer.trim();
 const isIch = t => !t.erledigt && !isRueck(t) && !t.wer.trim();
 const berichtOffen = t => !t.berichtErledigt && parseLocal(t.datum) < new Date();
 const byDue = (a, b) => (a.faellig || "9").localeCompare(b.faellig || "9") || a.erstellt - b.erstellt;
+// Nachfassen: Tage seit der letzten Anfrage; ab NACHFASSEN_TAGE wird markiert
+const NACHFASSEN_TAGE = 7;
+const daysSince = s => s ? Math.round((new Date(new Date().toDateString()) - parseLocal(s)) / 864e5) : null;
+const wartet = t => !t.erledigt && !t.geklaert && t.wer.trim();
+const stale = t => wartet(t) && t.angefragtAm && daysSince(t.angefragtAm) >= NACHFASSEN_TAGE;
+// Klären-Reihenfolge: noch nicht angefragt → am längsten wartend → Rest
+const byKlaeren = (a, b) => (!!a.angefragtAm - !!b.angefragtAm) || (a.angefragtAm || "").localeCompare(b.angefragtAm || "") || byDue(a, b);
+const fmtSince = s => { const d = daysSince(s); return d <= 0 ? "heute angefragt" : d === 1 ? "gestern angefragt" : `angefragt vor ${d} Tagen`; };
 const kundeOf = t => (t.terminId && termin(t.terminId)?.kunde) || "Ohne Kunde";
 
 /* ---------- Routing ---------- */
@@ -294,15 +308,18 @@ function todoRow(t, show = { kunde: true, wer: true }) {
     show.wer && t.wer.trim() ? `<span class="who">→ ${esc(t.wer)}</span>` : "",
     t.faellig ? `<span class="${late ? "late" : ""}">${late ? "überfällig · " : "bis "}${esc(fmtDate(t.faellig))}</span>` : "",
     t.rueckmeldung && !t.erledigt ? (t.geklaert ? "Kunde informieren" : "Rückmeldung an Kunden") : "",
+    wartet(t) && t.angefragtAm ? `<span class="${stale(t) ? "stale" : ""}">${fmtSince(t.angefragtAm)}</span>` : "",
   ].filter(Boolean).join(" · ");
   const half = !t.erledigt && t.rueckmeldung && t.geklaert;
+  const askBtn = show.ask && wartet(t) && (!t.angefragtAm || stale(t))
+    ? `<button class="btn small ask" data-ask="${t.id}">${t.angefragtAm ? "Nachgehakt" : "Angefragt"}</button>` : "";
   return `<div class="row ${t.erledigt ? "done" : ""}">
     <input type="checkbox" class="check ${half ? "half" : ""}" data-toggle="${t.id}" ${t.erledigt ? "checked" : ""}
       aria-label="${t.rueckmeldung && !t.geklaert ? "Geklärt" : "Erledigt"}">
     <div class="body tap" data-edit-todo="${t.id}">
       <div class="title">${esc(t.text)}</div>${meta ? `<div class="meta">${meta}</div>` : ""}
       ${t.ergebnis.trim() ? `<div class="result">${esc(t.ergebnis)}</div>` : ""}
-    </div></div>`;
+    </div>${askBtn}</div>`;
 }
 function groupBy(list, keyFn) {
   const m = new Map();
@@ -335,10 +352,12 @@ function renderTodos(app) {
   }
   if (todoTab === "klaeren") {
     const gs = groupBy(kl, t => t.wer.trim());
+    const nStale = kl.filter(stale).length;
+    if (nStale) html += `<div class="banner warn">⏰ ${nStale === 1 ? "1 Punkt wartet" : `${nStale} Punkte warten`} seit über ${NACHFASSEN_TAGE} Tagen – nachhaken?</div>`;
     gs.forEach((g, i) => html += `<h2><span class="grow">${esc(g.name)} · ${g.items.length}</span><button class="btn small" data-share-wer="${i}">Liste teilen</button></h2>
-      <div class="card">${g.items.sort(byDue).map(t => todoRow(t, { kunde: true })).join("")}</div>`);
+      <div class="card">${g.items.sort(byKlaeren).map(t => todoRow(t, { kunde: true, ask: true })).join("")}</div>`);
     if (!gs.length) html += `<div class="empty">Nichts mit anderen zu klären.<br><small>Trage bei einem Todo unter „Wer“ eine Person oder Abteilung ein.</small></div>`;
-    else html += `<p class="hint">Haken = geklärt. Bei Todos mit Rückmeldung wandern sie dann zu „Rückmeldung“.</p>`;
+    else html += `<p class="hint">„Angefragt“ tippen, wenn du nachgefragt hast – nach ${NACHFASSEN_TAGE} Tagen ohne Antwort wird der Punkt markiert. „Liste teilen“ markiert die Punkte automatisch als angefragt. Haken = geklärt.</p>`;
     app._groups = gs;
   }
   if (todoTab === "rueck") {
@@ -364,10 +383,13 @@ function renderTodos(app) {
     if (!text) return;
     db.todos.push(newTodo({ text })); save(); route(); document.getElementById("quickText").focus();
   };
-  app.querySelectorAll("[data-share-wer]").forEach(b => b.onclick = () => {
+  app.querySelectorAll("[data-share-wer]").forEach(b => b.onclick = async () => {
     const g = app._groups[b.dataset.shareWer];
-    shareText(`Offene Punkte: ${g.name}`, `Offene Punkte für ${g.name}:\n\n` + g.items.sort(byDue).map(t =>
+    const ok = await shareText(`Offene Punkte: ${g.name}`, `Offene Punkte für ${g.name}:\n\n` + g.items.sort(byDue).map(t =>
       `• ${t.terminId ? kundeOf(t) + ": " : ""}${t.text}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n") + "\n");
+    if (!ok) return;
+    g.items.forEach(t => t.angefragtAm = todayStr()); save(); route();
+    toast(`${g.items.length} Punkt${g.items.length > 1 ? "e" : ""} als angefragt markiert`);
   });
   app.querySelectorAll("[data-share-kunde]").forEach(b => b.onclick = () => {
     const g = app._groups[b.dataset.shareKunde];
@@ -419,6 +441,7 @@ function renderTermin(app, id) {
     <h2>Stichpunkte</h2>
     <div class="card notes" id="notes">${t.notizen.map(noteRow).join("")}</div>
     <p class="hint">Return = neuer Stichpunkt · <b>#</b> am Anfang = Thema (Überschrift im Bericht) · „→ Todo“ übernimmt den Punkt</p>
+    ${fehlendeThemen(t).length ? `<button class="btn" id="vorlage" style="margin-top:10px">Themen-Vorlage einfügen</button>` : ""}
     <h2>Todos aus diesem Termin</h2>
     <div class="card" id="terminTodos">${todos.map(x => todoRow(x, { kunde: false, wer: true })).join("") || `<div class="info">Noch keine Todos.</div>`}</div>
     <div class="actions" style="margin-top:10px"><button class="btn" id="addTodo">+ Todo hinzufügen</button></div>
@@ -433,6 +456,11 @@ function renderTermin(app, id) {
       <button class="btn danger" id="delTermin">Termin löschen</button>
     </div>`;
   app.querySelector("#editTermin").onclick = () => terminSheet(t);
+  const vb = app.querySelector("#vorlage");
+  if (vb) vb.onclick = () => {
+    const n = insertVorlage(t); save(); route(); toast(`${n} Thema${n > 1 ? "en" : ""} eingefügt`);
+    document.querySelector("#notes .note:not(.is-h) input")?.focus();
+  };
   app.querySelector("#addTodo").onclick = () => todoSheet(null, id);
   app.querySelector("#bericht").onclick = () => berichtSheet(t);
   app.querySelector("#berichtDone").onchange = e => { t.berichtErledigt = e.target.checked; save(); route(); if (t.berichtErledigt) toast("Bericht erledigt ✓"); };
@@ -449,6 +477,28 @@ function renderTermin(app, id) {
 }
 const isHeading = s => /^\s*#/.test(s);
 const headingText = s => s.replace(/^\s*#+\s*/, "");
+// Stichpunkte nach Themen gliedern; Themen ohne Inhalt (z. B. ungenutzte Vorlage) fallen weg
+function noteSections(t) {
+  const sections = []; let cur = null;
+  for (const n of t.notizen) {
+    const s = n.text.trim(); if (!s) continue;
+    if (isHeading(s)) { cur = { title: headingText(s), items: [] }; sections.push(cur); }
+    else { if (!cur) { cur = { title: null, items: [] }; sections.push(cur); } cur.items.push(s); }
+  }
+  return sections.filter(s => s.items.length);
+}
+const vorlageThemen = () => db.einstellungen.vorlage.split("\n").map(headingText).map(s => s.trim()).filter(Boolean);
+function fehlendeThemen(t) {
+  const have = new Set(t.notizen.filter(n => isHeading(n.text)).map(n => headingText(n.text).trim().toLowerCase()));
+  return vorlageThemen().filter(h => !have.has(h.toLowerCase()));
+}
+function insertVorlage(t) {
+  const add = fehlendeThemen(t);
+  if (!add.length) return 0;
+  if (t.notizen.every(n => !n.text.trim())) t.notizen = [];
+  for (const h of add) t.notizen.push({ id: uid(), text: "# " + h }, { id: uid(), text: "" });
+  return add.length;
+}
 function noteRow(n) {
   const isTodo = n.todoId && todo(n.todoId);
   return `<div class="note ${isHeading(n.text) ? "is-h" : ""}" data-note="${n.id}"><span class="dot">•</span>
@@ -494,12 +544,7 @@ function berichtText(t) {
   const L = [`Besuchsbericht: ${t.kunde}`, "", `Datum: ${fmtRange(t.datum, t.ende)}`];
   if (t.ort) L.push(`Ort: ${t.ort}`);
   if (t.teilnehmer) L.push(`Teilnehmer: ${t.teilnehmer}`);
-  const sections = []; let cur = null;
-  for (const n of t.notizen) {
-    const s = n.text.trim(); if (!s) continue;
-    if (isHeading(s)) { cur = { title: headingText(s), items: [] }; sections.push(cur); }
-    else { if (!cur) { cur = { title: null, items: [] }; sections.push(cur); } cur.items.push(s); }
-  }
+  const sections = noteSections(t);
   const withTitles = sections.filter(s => s.title);
   if (sections.length) {
     L.push("", withTitles.length ? "Besprochene Themen" : "Gesprächsinhalte");
@@ -625,6 +670,11 @@ function renderMehr(app) {
     </div>
     <h2>Für Berichte</h2>
     <label class="lbl"><input class="field" id="myName" placeholder="Dein Name (statt „ich“ bei Zuständig)" value="${esc(db.einstellungen.name)}" autocomplete="name"></label>
+    <h2>Themen-Vorlage</h2>
+    <label class="lbl">Ein Thema pro Zeile – wird im Termin als Überschriften eingefügt
+      <textarea class="field" id="vorlageText" rows="5" placeholder="z. B. Ausgangslage">${esc(db.einstellungen.vorlage)}</textarea></label>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" class="check" id="vorlageAuto" ${db.einstellungen.vorlageAuto ? "checked" : ""}>
+      <span>Bei neuen Terminen automatisch einfügen</span></label>
     <h2>Datensicherung</h2>
     <div class="card"><div class="info">Deine Daten liegen nur auf diesem iPhone. Sichere sie regelmäßig, z. B. in „Dateien“ oder per Mail an dich.<br>
       Letzte Sicherung: <strong>${last ? new Date(+last).toLocaleDateString("de-DE") : "noch nie"}</strong></div></div>
@@ -639,6 +689,8 @@ function renderMehr(app) {
     <div class="actions"><button class="btn danger" id="wipe">Alle Daten löschen</button></div>`;
   app.querySelector("#shareOpen").onclick = () => shareText("Offene Todos", openTodosText());
   app.querySelector("#myName").onchange = e => { db.einstellungen.name = e.target.value.trim(); save(); toast("Gespeichert"); };
+  app.querySelector("#vorlageText").onchange = e => { db.einstellungen.vorlage = e.target.value; save(); toast("Vorlage gespeichert"); };
+  app.querySelector("#vorlageAuto").onchange = e => { db.einstellungen.vorlageAuto = e.target.checked; save(); };
   app.querySelector("#backup").onclick = doBackup;
   app.querySelector("#restore").onclick = () => document.getElementById("importFile").click();
   app.querySelector("#wipe").onclick = () => {
@@ -671,10 +723,10 @@ document.getElementById("importFile").onchange = async e => {
 
 /* ---------- Teilen / Export ---------- */
 function terminText(t) {
-  const notes = t.notizen.filter(n => n.text.trim());
+  const secs = noteSections(t);
   const todos = db.todos.filter(x => x.terminId === t.id);
   let s = `Kundentermin: ${t.kunde}\n${fmtRange(t.datum, t.ende)}${t.ort ? "\n" + t.ort : ""}${t.teilnehmer ? "\nTeilnehmer: " + t.teilnehmer : ""}\n`;
-  if (notes.length) s += `\nStichpunkte:\n${notes.map(n => isHeading(n.text) ? `\n${headingText(n.text.trim())}:` : "• " + n.text.trim()).join("\n")}\n`;
+  if (secs.length) s += `\nStichpunkte:\n${secs.map(sec => (sec.title ? `\n${sec.title}:\n` : "") + sec.items.map(i => "• " + i).join("\n")).join("\n")}\n`;
   if (todos.length) s += `\nTodos:\n${todos.map(x => `${x.erledigt ? "☑" : "☐"} ${x.text}${x.wer.trim() ? ` → ${x.wer.trim()}` : ""}${x.faellig ? ` (bis ${fmtDate(x.faellig)})` : ""}`).join("\n")}\n`;
   return s;
 }
@@ -685,12 +737,13 @@ function openTodosText() {
     s += `\n${g.name}:\n${g.items.map(t => `☐ ${t.text}${t.wer.trim() ? ` → ${t.wer.trim()}` : ""}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n")}\n`;
   return s;
 }
+// Gibt true zurück, wenn geteilt oder kopiert wurde (false bei Abbruch/Fehler)
 async function shareText(title, text) {
   if (navigator.share) {
-    try { await navigator.share({ title, text }); return; } catch (e) { if (e.name === "AbortError") return; }
+    try { await navigator.share({ title, text }); return true; } catch (e) { if (e.name === "AbortError") return false; }
   }
-  try { await navigator.clipboard.writeText(text); toast("In die Zwischenablage kopiert"); }
-  catch (e) { toast("Teilen nicht möglich"); }
+  try { await navigator.clipboard.writeText(text); toast("In die Zwischenablage kopiert"); return true; }
+  catch (e) { toast("Teilen nicht möglich"); return false; }
 }
 async function shareFile(blob, name) {
   const file = new File([blob], name, { type: blob.type });
@@ -754,8 +807,9 @@ function terminSheet(t) {
       if (!v.ende || v.ende <= v.datum) v.ende = addHours(v.datum, 3);
       if (t) { Object.assign(t, v); save(); route(); }
       else { const n = { id: uid(), ...v, notizen: [{ id: uid(), text: "" }], berichtErledigt: false, erstellt: Date.now() };
+        if (db.einstellungen.vorlageAuto) insertVorlage(n);
         db.termine.push(n); save(); location.hash = `#/termin/${n.id}`;
-        setTimeout(() => document.querySelector("#notes input")?.focus(), 50); }
+        setTimeout(() => document.querySelector("#notes .note:not(.is-h) input")?.focus(), 50); }
     });
   // Ende folgt dem Beginn (+3 h), solange es nicht von Hand geändert wurde
   let endTouched = !!t;
@@ -795,6 +849,9 @@ function todoSheet(t, terminId) {
       <label class="lbl">Fällig am<input class="field" name="faellig" type="date" value="${esc(t?.faellig)}"></label>
     </div>
     <datalist id="werList">${werList.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
+    <label class="lbl" data-angefragt style="${t?.wer?.trim() ? "" : "display:none"}">Zuletzt angefragt / nachgehakt am
+      <div class="btnrow"><input class="field" name="angefragtAm" type="date" value="${esc(t?.angefragtAm)}" style="flex:1">
+      <button type="button" class="btn small fit" data-heute>Heute</button></div></label>
     <label class="chk"><input type="checkbox" class="check" name="rueckmeldung" ${t?.rueckmeldung ? "checked" : ""}>
       <span>Rückmeldung an Kunden nötig</span></label>
     <label class="chk" data-geklaert style="${t?.rueckmeldung ? "" : "display:none"}"><input type="checkbox" class="check" name="geklaert" ${t?.geklaert ? "checked" : ""}>
@@ -804,13 +861,16 @@ function todoSheet(t, terminId) {
     ${t ? `<button type="button" class="btn danger" data-del>Todo löschen</button>` : ""}`,
     f => {
       const v = { text: f.text.value.trim(), wer: f.wer.value.trim(), faellig: f.faellig.value, ergebnis: f.ergebnis.value.trim(),
-                  rueckmeldung: f.rueckmeldung.checked, geklaert: f.rueckmeldung.checked && f.geklaert.checked };
+                  rueckmeldung: f.rueckmeldung.checked, geklaert: f.rueckmeldung.checked && f.geklaert.checked,
+                  angefragtAm: f.wer.value.trim() ? f.angefragtAm.value : "" };
       if (!v.text) return false;
       if (t) Object.assign(t, v);
       else db.todos.push(newTodo({ ...v, terminId: terminId || null }));
       save(); route();
     });
   form.rueckmeldung.onchange = () => form.querySelector("[data-geklaert]").style.display = form.rueckmeldung.checked ? "" : "none";
+  form.wer.addEventListener("input", () => form.querySelector("[data-angefragt]").style.display = form.wer.value.trim() ? "" : "none");
+  form.querySelector("[data-heute]").onclick = () => form.angefragtAm.value = todayStr();
   form.querySelector("[data-goto]")?.addEventListener("click", () => { sheet.close(); location.hash = `#/termin/${tm.id}`; });
   form.querySelector("[data-del]")?.addEventListener("click", () => {
     if (!confirm("Todo löschen?")) return;
@@ -825,6 +885,9 @@ function todoSheet(t, terminId) {
 document.getElementById("app").addEventListener("click", e => {
   const open = e.target.closest("[data-open]");
   if (open) { location.hash = `#/termin/${open.dataset.open}`; return; }
+  const ask = e.target.closest("[data-ask]");
+  if (ask) { const t = todo(ask.dataset.ask); const again = !!t.angefragtAm; t.angefragtAm = todayStr(); save(); route();
+    toast(again ? "Nachgehakt – Frist läuft neu" : "Als angefragt markiert"); return; }
   const ed = e.target.closest("[data-edit-todo]");
   if (ed) { todoSheet(todo(ed.dataset.editTodo)); return; }
 });
