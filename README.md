@@ -26,7 +26,15 @@ Alle Daten bleiben **nur lokal auf dem iPhone** (im Speicher der Web-App).
   - **★ Wichtig**: Diese Aufgaben stehen oben in ihrer Gruppe. Auch direkt in der Liste per Stern umschaltbar.
   - **Ergebnis**: was du in Erfahrung gebracht hast.
   - **Rückmeldung an Kunden nötig**: Die Aufgabe hat dann zwei Schritte. Der erste Haken bedeutet „geklärt“, der zweite „Kunde informiert“.
-- **Kundenstamm:** Paare aus Kundennr. und Name werden gemerkt, sobald du sie bei einer Aufgabe einträgst. Unter Mehr → Kunden kannst du sie bearbeiten oder anlegen.
+- **Projekte** (eigener Tab): bündeln viele kleine Teilaufgaben, z. B. „Shopdesign“ mit Footer, Slider, Buttons anpassen …
+  - Projekt mit Name, optional Kundennr./Kunde, Fälligkeit und Notiz. Teilaufgaben erben den Kunden.
+  - **Schnellfeld im Projekt:** Return legt die Teilaufgabe an, der Cursor bleibt im Feld für die nächste. Kurzbefehle wie `morgen`, `@Wer` und `!` funktionieren auch hier.
+  - **Liste einfügen:** Eine kopierte Liste mit mehreren Zeilen wird beim Einfügen in einzelne Teilaufgaben zerlegt. Aufzählungszeichen wie `-`, `•` oder `1.` fallen weg.
+  - Teilaufgaben sind normale Aufgaben. Antippen öffnet Wer, Fälligkeit, ★ und Rückmeldung. Mit `@Wer` landen sie unter „Klären“.
+  - In **„Ich“** erscheint jedes Projekt als **eine Zeile** mit Fortschritt (z. B. 4/12) und der nächsten Teilaufgabe. Einzeln stehen dort nur Teilaufgaben mit Fälligkeit oder ★.
+  - **Projekt abschließen** hakt alle restlichen Teilaufgaben ab. Abgeschlossene Projekte findest du im Tab „Projekte“ unter „Abgeschlossen“.
+  - Eine bestehende Aufgabe lässt sich im Formular über das Feld „Projekt“ einem Projekt zuordnen.
+- **Kundenstamm:** Paare aus Kundennr. und Name werden gemerkt, sobald du sie bei einer Aufgabe oder einem Projekt einträgst. Unter Mehr → Kunden kannst du sie bearbeiten oder anlegen.
   Auch Termine haben eine optionale Kundennr.
 - **Suche** im Bereich „Aufgaben“: nach Text, Kunde, Kundennr., Wer und Ergebnis, über alle drei Ansichten.
 - **Aufgaben** in drei Ansichten:

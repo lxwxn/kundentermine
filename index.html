@@ -190,6 +190,15 @@
   .kunden .k-nr { flex: 0 0 34%; font-variant-numeric: tabular-nums; }
   .kunden .k-name { flex: 1; }
   .kunden .newk { background: var(--accent-soft); }
+
+  /* Projekte */
+  .progress { height: 4px; border-radius: 2px; background: var(--line); margin-top: 7px; overflow: hidden; }
+  .progress span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .meta .proj { color: var(--accent); }
+  .projnotiz { white-space: pre-wrap; margin-top: 6px; }
+  .detail-head .progress { max-width: 260px; }
+  .banner.ok { justify-content: space-between; }
+  select.field { min-height: 50px; }
 </style>
 </head>
 <body>
@@ -197,6 +206,7 @@
 
 <nav class="tabs">
   <a href="#/aufgaben" data-tab="aufgaben"><span class="ico">☑︎</span>Aufgaben</a>
+  <a href="#/projekte" data-tab="projekte"><span class="ico">▤</span>Projekte</a>
   <a href="#/termine" data-tab="termine"><span class="ico">◷</span>Termine</a>
   <a href="#/mehr" data-tab="mehr"><span class="ico">⋯</span>Mehr</a>
 </nav>
@@ -222,6 +232,8 @@ function migrate(d) {
   // Kundenstamm: nur ausdrücklich eingetragene Paare aus Kundennr. und Name
   d.kunden = (Array.isArray(d.kunden) ? d.kunden : [])
     .map(k => ({ nr: String(k?.nr ?? "").trim(), name: String(k?.name ?? "").trim() })).filter(k => k.nr);
+  d.projekte = (Array.isArray(d.projekte) ? d.projekte : []).filter(p => p && p.id).map(p => Object.assign(
+    { name: "", kundeNr: "", kunde: "", faellig: "", notiz: "", erledigt: false, erledigtAm: null, erstellt: 0 }, p));
   for (const t of d.termine) {
     t.kundeNr = t.kundeNr || "";
     t.notizen = t.notizen || [];
@@ -239,6 +251,7 @@ function migrate(d) {
     t.kunde = t.kunde || "";       // leer = vom Termin bzw. Kundenstamm übernehmen
     t.kundeNr = t.kundeNr || "";
     t.wichtig = !!t.wichtig;
+    t.projektId = t.projektId || null;
   }
   return d;
 }
@@ -256,6 +269,7 @@ function save() {
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const termin = id => db.termine.find(t => t.id === id);
 const todo = id => db.todos.find(t => t.id === id);
+const projekt = id => id ? db.projekte.find(p => p.id === id) : null;
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 
@@ -322,10 +336,13 @@ function merkeKunde(nr, name, overwrite = true) {
   else db.kunden.push({ nr, name });
   db.kunden.sort((a, b) => a.nr.localeCompare(b.nr, "de", { numeric: true }));
 }
-// Kunde einer Aufgabe: eigene Angaben zuerst, sonst live vom verknüpften Termin
+// Kunde einer Aufgabe: eigene Angaben zuerst, sonst live vom Projekt, sonst vom verknüpften Termin
+// (Projekte selbst haben nur eigene Angaben – ohne projektId/terminId)
 function kundeInfo(t) {
-  const nr = t.kundeNr.trim(), name = t.kunde.trim();
+  const nr = (t.kundeNr || "").trim(), name = (t.kunde || "").trim();
   if (nr || name) return { nr, name: name || kundeByNr(nr)?.name || "" };
+  const p = projekt(t.projektId);
+  if (p && hatKunde(p)) return kundeInfo(p);
   const tm = t.terminId && termin(t.terminId);
   if (!tm) return { nr: "", name: "" };
   const tnr = (tm.kundeNr || "").trim();
@@ -337,16 +354,68 @@ const kundeLabel = t => kundeText(kundeInfo(t)) || "Ohne Kunde";
 const kundeKey = t => { const k = kundeInfo(t); return k.nr ? "#" + lc(k.nr) : lc(k.name); };
 const kundenOptions = () => db.kunden.map(k => `<option value="${esc(k.nr)}">${esc(k.name)}</option>`).join("");
 const kundenNamenOptions = () => db.kunden.filter(k => k.name).map(k => `<option value="${esc(k.name)}">${esc(k.nr)}</option>`).join("");
+// Formularwerte Kundennr./Kunde normalisieren: bekannter Name → Nr. aus dem Stamm; neues Paar merken.
+// Der Name kommt dann live aus dem Kundenstamm.
+function kundeAusForm(kundeNr, kunde) {
+  kundeNr = kundeNr.trim(); kunde = kunde.trim();
+  const perName = !kundeNr && kundeByName(kunde);
+  if (perName) { kundeNr = perName.nr; kunde = ""; }
+  else if (kundeNr && kunde) { merkeKunde(kundeNr, kunde); kunde = ""; }
+  else if (kundeNr && kundeByNr(kundeNr)) kunde = "";
+  return { kundeNr, kunde };
+}
+// Kundennr. ↔ Name im Formular gegenseitig ergänzen
+function wireKundeFelder(form) {
+  let nameAuto = false;
+  form.kundeNr.addEventListener("change", () => {
+    const k = kundeByNr(form.kundeNr.value);
+    if (k?.name && (!form.kunde.value.trim() || nameAuto)) { form.kunde.value = k.name; nameAuto = true; }
+  });
+  form.kunde.addEventListener("input", () => nameAuto = false);
+  form.kunde.addEventListener("change", () => {
+    const k = kundeByName(form.kunde.value);
+    if (k && !form.kundeNr.value.trim()) form.kundeNr.value = k.nr;
+  });
+}
+
+/* ---------- Projekte ---------- */
+const projektTodos = p => db.todos.filter(t => t.projektId === p.id);
+// Teilaufgabe eines abgeschlossenen Projekts – taucht in „Aufgaben“ nicht mehr auf
+const imFertigenProjekt = t => !!projekt(t.projektId)?.erledigt;
+const projektName = t => projekt(t.projektId)?.name || "";
+const projektPrefix = t => projektName(t) ? `${projektName(t)} – ` : "";
+// „Ich“: Teilaufgaben nur einzeln, wenn fällig oder wichtig – sonst steckt sie in der Projektzeile
+const einzelnInIch = t => !t.projektId || !!t.faellig || t.wichtig;
+const naechste = (list) => list.filter(t => !t.erledigt).sort((a, b) => (b.wichtig - a.wichtig) || a.erstellt - b.erstellt)[0];
+function projektRow(p, offeneEigene) {
+  const alle = projektTodos(p), fertig = alle.filter(t => t.erledigt).length;
+  const late = p.faellig && !p.erledigt && p.faellig < todayStr();
+  const next = naechste(offeneEigene || alle);
+  const meta = [
+    hatKunde(p) ? esc(kundeLabel(p)) : "",
+    p.faellig && !p.erledigt ? `<span class="${late ? "late" : ""}">${late ? "überfällig · " : "bis "}${esc(fmtDate(p.faellig))}</span>` : "",
+    next ? `als Nächstes: ${esc(next.text)}` : "",
+  ].filter(Boolean).join(" · ");
+  return `<div class="row tap ${p.erledigt ? "done" : ""}" data-open-projekt="${p.id}"><div class="body">
+    <div class="title">${esc(p.name)}</div>${meta ? `<div class="meta">${meta}</div>` : ""}
+    ${alle.length ? `<div class="progress"><span style="width:${Math.round(fertig / alle.length * 100)}%"></span></div>` : ""}</div>
+    <span class="badge">${fertig}/${alle.length}</span><span class="chev">›</span></div>`;
+}
+// Aufzählungszeichen am Zeilenanfang entfernen („- “, „• “, „* “, „1. “, „1) “)
+const ohneAufzaehlung = s => s.replace(/^\s*(?:[-–•*·▪◦]|\d+[.)])\s+/, "").replace(/^\s*\[[ xX]?\]\s*/, "").trim();
 
 /* ---------- Routing ---------- */
 function route() {
   let [, view = "aufgaben", id] = location.hash.split("/");
   if (view === "todos") view = "aufgaben"; // alte Links
-  document.querySelectorAll("nav.tabs a").forEach(a =>
-    a.classList.toggle("active", a.dataset.tab === (view === "termin" ? "termine" : view)));
+  if (view === "projekt" && !projekt(id)) view = "projekte";
+  const tab = { termin: "termine", projekt: "projekte" }[view] || view;
+  document.querySelectorAll("nav.tabs a").forEach(a => a.classList.toggle("active", a.dataset.tab === tab));
   const app = document.getElementById("app");
   if (view === "termin" && termin(id)) renderTermin(app, id);
   else if (view === "termine") renderTermine(app);
+  else if (view === "projekt") renderProjekt(app, id);
+  else if (view === "projekte") renderProjekte(app);
   else if (view === "mehr") renderMehr(app);
   else renderAufgaben(app);
 }
@@ -362,6 +431,7 @@ let quickDraft = "";
 function todoRow(t, show = { kunde: true, wer: true }) {
   const late = t.faellig && !t.erledigt && t.faellig < todayStr();
   const meta = [
+    show.projekt !== false && t.projektId && projektName(t) ? `<span class="proj">▤ ${esc(projektName(t))}</span>` : "",
     show.kunde && hatKunde(t) ? esc(kundeLabel(t)) : "",
     show.wer && t.wer.trim() ? `<span class="who">→ ${esc(t.wer)}</span>` : "",
     t.faellig ? `<span class="${late ? "late" : ""}">${late ? "überfällig · " : "bis "}${esc(fmtDate(t.faellig))}</span>` : "",
@@ -446,13 +516,21 @@ const QUICK_TIPP = "Kurzbefehle: morgen · Freitag · bis Fr · 12.12. · @Wer �
 
 function renderAufgaben(app) {
   const q = lc(aufgabenSuche);
-  const passt = t => { if (!q) return true; const k = kundeInfo(t); return [t.text, t.wer, t.ergebnis, k.nr, k.name].some(x => lc(x).includes(q)); };
-  const alle = db.todos.filter(passt);
-  const ich = alle.filter(isIch), kl = alle.filter(isKlaeren), rm = alle.filter(isRueck);
+  const passt = t => { if (!q) return true; const k = kundeInfo(t); return [t.text, t.wer, t.ergebnis, k.nr, k.name, projektName(t)].some(x => lc(x).includes(q)); };
+  const alle = db.todos.filter(t => !imFertigenProjekt(t)).filter(passt);
+  const ichAlle = alle.filter(isIch);
+  const ich = ichAlle.filter(einzelnInIch), kl = alle.filter(isKlaeren), rm = alle.filter(isRueck);
+  // Aktive Projekte mit offenen eigenen Teilaufgaben – als je eine Zeile
+  const ichProjekte = db.projekte.filter(p => !p.erledigt).map(p => {
+    const eigene = db.todos.filter(t => t.projektId === p.id && isIch(t));
+    const k = kundeInfo(p);
+    const treffer = !q || [p.name, k.nr, k.name].some(x => lc(x).includes(q)) || eigene.some(passt);
+    return eigene.length && treffer ? { p, eigene } : null;
+  }).filter(Boolean).sort((a, b) => (a.p.faellig || "9").localeCompare(b.p.faellig || "9") || a.p.name.localeCompare(b.p.name, "de"));
   const berichte = db.termine.filter(berichtOffen).filter(t => !q || [t.kunde, t.kundeNr, kundeByNr(t.kundeNr)?.name].some(x => lc(x).includes(q)))
     .sort((a, b) => a.datum.localeCompare(b.datum));
-  const done = alle.filter(t => t.erledigt).sort((a, b) => (b.erledigtAm || 0) - (a.erledigtAm || 0));
-  const tabs = [["ich", "Ich", ich.length + berichte.length], ["klaeren", "Klären", kl.length], ["rueck", "Rückmeldung", rm.length]];
+  const done = alle.filter(t => t.erledigt && !t.projektId).sort((a, b) => (b.erledigtAm || 0) - (a.erledigtAm || 0));
+  const tabs = [["ich", "Ich", ich.length + berichte.length + ichProjekte.length], ["klaeren", "Klären", kl.length], ["rueck", "Rückmeldung", rm.length]];
   const keineTreffer = `<div class="empty">Keine Treffer für „${esc(aufgabenSuche.trim())}“.</div>`;
   let html = `<div class="topbar"><h1>Aufgaben</h1><button class="iconbtn" id="newAufgabe" aria-label="Neue Aufgabe">+</button></div>${backupBanner()}
     <form class="quickadd" id="quickadd"><input id="quickText" value="${esc(quickDraft)}" placeholder="Neue Aufgabe … z. B. Angebot schicken morgen"
@@ -481,7 +559,8 @@ function renderAufgaben(app) {
       for (const [name, list, cls] of groups) if (list.length)
         html += `<h2 class="${cls || ""}"><span class="grow">${name} · ${list.length}</span></h2><div class="card">${list.sort(byPrio).map(t => todoRow(t, { kunde: true })).join("")}</div>`;
     }
-    if (!ich.length && !berichte.length) html += q ? keineTreffer : `<div class="empty">Nichts zu tun für dich 🎉</div>`;
+    if (ichProjekte.length) html += `<h2><span class="grow">Projekte · ${ichProjekte.length}</span></h2><div class="card">${ichProjekte.map(x => projektRow(x.p, x.eigene)).join("")}</div>`;
+    if (!ich.length && !berichte.length && !ichProjekte.length) html += q ? keineTreffer : `<div class="empty">Nichts zu tun für dich 🎉</div>`;
   }
   if (todoTab === "klaeren") {
     const gs = groupBy(kl, t => t.wer.trim());
@@ -542,7 +621,7 @@ function renderAufgaben(app) {
   app.querySelectorAll("[data-share-wer]").forEach(b => b.onclick = async () => {
     const g = app._groups[b.dataset.shareWer];
     const ok = await shareText(`Offene Punkte: ${g.name}`, `Offene Punkte für ${g.name}:\n\n` + g.items.sort(byDue).map(t =>
-      `• ${hatKunde(t) ? kundeLabel(t) + ": " : ""}${t.text}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n") + "\n");
+      `• ${hatKunde(t) ? kundeLabel(t) + ": " : ""}${projektPrefix(t)}${t.text}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n") + "\n");
     if (!ok) return;
     g.items.forEach(t => t.angefragtAm = todayStr()); save(); route();
     toast(`${g.items.length} Punkt${g.items.length > 1 ? "e" : ""} als angefragt markiert`);
@@ -556,7 +635,157 @@ function renderAufgaben(app) {
   if (tg) tg.onclick = () => { showDone = !showDone; route(); };
 }
 const newTodo = o => Object.assign({ id: uid(), text: "", faellig: "", erledigt: false, terminId: null, erstellt: Date.now(),
-  wer: "", ergebnis: "", rueckmeldung: false, geklaert: false, angefragtAm: "", kunde: "", kundeNr: "", wichtig: false }, o);
+  wer: "", ergebnis: "", rueckmeldung: false, geklaert: false, angefragtAm: "", kunde: "", kundeNr: "", wichtig: false, projektId: null }, o);
+
+/* ---------- Ansicht: Projekte ---------- */
+let projekteSuche = "";
+let showFertigeProjekte = false;
+let showFertigeTeile = false;
+const projektDrafts = {}; // angefangener Text im Schnellfeld je Projekt
+const TEIL_TIPP = "Return = nächste Teilaufgabe · Liste einfügen = mehrere auf einmal · morgen · @Wer · ! = wichtig";
+
+function renderProjekte(app) {
+  const q = lc(projekteSuche);
+  const passt = p => { if (!q) return true; const k = kundeInfo(p);
+    return [p.name, p.notiz, k.nr, k.name].some(x => lc(x).includes(q)) || projektTodos(p).some(t => lc(t.text).includes(q)); };
+  const list = db.projekte.filter(passt);
+  const aktiv = list.filter(p => !p.erledigt)
+    .sort((a, b) => (a.faellig || "9").localeCompare(b.faellig || "9") || a.name.localeCompare(b.name, "de", { numeric: true }));
+  const fertig = list.filter(p => p.erledigt).sort((a, b) => (b.erledigtAm || 0) - (a.erledigtAm || 0));
+  let html = `<div class="topbar"><h1>Projekte</h1><button class="iconbtn" id="newProjekt" aria-label="Neues Projekt">+</button></div>
+    <input class="field search" id="projekteSuche" type="search" placeholder="Projekt, Kunde, Kundennr. oder Teilaufgabe" value="${esc(projekteSuche)}">`;
+  if (aktiv.length) html += `<h2>Aktiv · ${aktiv.length}</h2><div class="card">${aktiv.map(p => projektRow(p)).join("")}</div>`;
+  else html += `<div class="empty">${q ? `Keine Treffer für „${esc(projekteSuche.trim())}“.`
+    : `Noch keine aktiven Projekte.<br><small>Ein Projekt bündelt viele kleine Teilaufgaben – z. B. „Shopdesign“ mit Footer, Slider, Buttons anpassen … Tippe auf +.</small>`}</div>`;
+  if (fertig.length) {
+    html += `<h2><span class="grow">Abgeschlossen · ${fertig.length}</span><button class="btn small" id="toggleFertig">${showFertigeProjekte ? "ausblenden" : "anzeigen"}</button></h2>`;
+    if (showFertigeProjekte) html += `<div class="card">${fertig.map(p => projektRow(p)).join("")}</div>`;
+  }
+  app.innerHTML = html;
+  app.querySelector("#newProjekt").onclick = () => projektSheet(null);
+  const s = app.querySelector("#projekteSuche");
+  s.oninput = () => { projekteSuche = s.value; const pos = s.selectionStart; route();
+    const n = document.getElementById("projekteSuche"); n.focus(); n.setSelectionRange(pos, pos); };
+  const tg = app.querySelector("#toggleFertig");
+  if (tg) tg.onclick = () => { showFertigeProjekte = !showFertigeProjekte; route(); };
+}
+
+function renderProjekt(app, id) {
+  const p = projekt(id);
+  const teile = projektTodos(p);
+  const offen = teile.filter(t => !t.erledigt).sort((a, b) => a.erstellt - b.erstellt);
+  const fertig = teile.filter(t => t.erledigt).sort((a, b) => (b.erledigtAm || 0) - (a.erledigtAm || 0));
+  const k = kundeInfo(p);
+  const late = p.faellig && !p.erledigt && p.faellig < todayStr();
+  const kopf = [
+    kundeText(k) ? esc(kundeText(k)) : "",
+    p.faellig ? `<span style="${late ? "color:var(--danger);font-weight:600" : ""}">${late ? "überfällig – " : ""}bis ${esc(fmtDate(p.faellig))}</span>` : "",
+    p.erledigt ? `Abgeschlossen am ${new Date(p.erledigtAm || Date.now()).toLocaleDateString("de-DE")}` : "",
+  ].filter(Boolean).join("<br>");
+  let html = `
+    <button class="back" onclick="location.hash='#/projekte'">‹ Projekte</button>
+    <div class="topbar detail-head"><h1>${esc(p.name)}</h1><button class="btn small" id="editProjekt">Bearbeiten</button></div>
+    <div class="sub detail-head">${kopf}
+      ${teile.length ? `<div class="progress"><span style="width:${Math.round(fertig.length / teile.length * 100)}%"></span></div>
+        <div class="hint" style="margin:4px 0 0">${fertig.length} von ${teile.length} erledigt</div>` : ""}
+      ${p.notiz ? `<div class="projnotiz">${esc(p.notiz)}</div>` : ""}</div>`;
+  if (!p.erledigt && teile.length && !offen.length)
+    html += `<div class="banner ok">✓ Alles erledigt – Projekt abschließen?<button class="btn small" id="closeBanner">Abschließen</button></div>`;
+  html += `<h2><span class="grow">Teilaufgaben${offen.length ? ` · ${offen.length} offen` : ""}</span></h2>`;
+  if (!p.erledigt) html += `<form class="quickadd" id="teilAdd"><input id="teilText" value="${esc(projektDrafts[p.id] || "")}"
+      placeholder="Teilaufgabe … z. B. Footer anpassen" enterkeyhint="next" autocomplete="off" autocapitalize="sentences"></form>
+    <div class="preview" id="teilPreview"></div>`;
+  if (offen.length) html += `<div class="card" style="margin-top:10px">${offen.map(t => todoRow(t, { kunde: false, wer: true, ask: true, projekt: false })).join("")}</div>`;
+  else if (!teile.length) html += `<div class="empty">Noch keine Teilaufgaben.<br><small>Tippe oben einen Punkt ein und drück Return – der nächste folgt direkt. Eine kopierte Liste wird beim Einfügen in einzelne Teilaufgaben zerlegt.</small></div>`;
+  if (fertig.length) {
+    html += `<h2><span class="grow">Erledigt · ${fertig.length}</span><button class="btn small" id="toggleTeile">${showFertigeTeile ? "ausblenden" : "anzeigen"}</button></h2>`;
+    if (showFertigeTeile) html += `<div class="card">${fertig.map(t => todoRow(t, { kunde: false, wer: true, projekt: false })).join("")}</div>`;
+  }
+  html += `<div class="actions">
+      <button class="btn ${p.erledigt || !offen.length ? "primary" : ""}" id="toggleProjekt">${p.erledigt ? "Projekt wieder öffnen" : "Projekt abschließen"}</button>
+      <button class="btn" id="shareProjekt">Projekt teilen (Checkliste)</button>
+      <button class="btn danger" id="delProjekt">Projekt löschen</button>
+    </div>`;
+  app.innerHTML = html;
+
+  app.querySelector("#editProjekt").onclick = () => projektSheet(p);
+  app.querySelector("#closeBanner")?.addEventListener("click", () => projektAbschliessen(p));
+  app.querySelector("#toggleProjekt").onclick = () => {
+    if (!p.erledigt) { projektAbschliessen(p); return; }
+    p.erledigt = false; p.erledigtAm = null; save(); route(); toast("Projekt wieder geöffnet");
+  };
+  app.querySelector("#shareProjekt").onclick = () => shareText(`Projekt ${p.name}`, projektText(p));
+  app.querySelector("#delProjekt").onclick = () => projektLoeschen(p);
+  const tg = app.querySelector("#toggleTeile");
+  if (tg) tg.onclick = () => { showFertigeTeile = !showFertigeTeile; route(); };
+
+  const qt = app.querySelector("#teilText");
+  if (!qt) return;
+  const pv = app.querySelector("#teilPreview");
+  const neu = raw => {
+    const pq = parseQuick(raw); if (!pq.text) return null;
+    const td = newTodo({ text: pq.text, faellig: pq.faellig, wer: pq.wer, kundeNr: pq.kundeNr, wichtig: pq.wichtig, projektId: p.id });
+    db.todos.push(td); return td;
+  };
+  const showPreview = () => {
+    const v = qt.value.trim();
+    const pr = v ? quickPreview(parseQuick(v)) : "";
+    pv.classList.toggle("tip", !pr);
+    pv.innerHTML = pr || (v || document.activeElement === qt ? esc(TEIL_TIPP) : "");
+  };
+  qt.addEventListener("input", () => { projektDrafts[p.id] = qt.value; showPreview(); });
+  qt.addEventListener("focus", showPreview);
+  qt.addEventListener("blur", () => setTimeout(showPreview, 150));
+  showPreview();
+  app.querySelector("#teilAdd").onsubmit = e => {
+    e.preventDefault();
+    if (!qt.value.trim()) return;
+    if (!neu(qt.value)) { toast("Bitte noch schreiben, was zu tun ist"); return; }
+    projektDrafts[p.id] = ""; save(); route();
+    document.getElementById("teilText").focus(); // synchron, damit die Tastatur auf dem iPhone offen bleibt
+  };
+  // Eingefügte Liste (mehrere Zeilen) → eine Teilaufgabe pro Zeile
+  qt.addEventListener("paste", e => {
+    const zeilen = (e.clipboardData?.getData("text/plain") || "").split(/\r?\n/).map(ohneAufzaehlung).filter(Boolean);
+    if (zeilen.length < 2) return;
+    e.preventDefault();
+    const n = zeilen.map(neu).filter(Boolean).length;
+    save(); route();
+    document.getElementById("teilText").focus();
+    toast(`${n} Teilaufgabe${n === 1 ? "" : "n"} angelegt`);
+  });
+}
+function projektAbschliessen(p) {
+  const offen = projektTodos(p).filter(t => !t.erledigt);
+  if (offen.length && !confirm(`Projekt „${p.name}“ abschließen?\n${offen.length === 1 ? "Die offene Teilaufgabe wird" : `${offen.length} offene Teilaufgaben werden`} als erledigt markiert.`)) return;
+  const now = Date.now();
+  offen.forEach(t => { t.erledigt = true; t.erledigtAm = now; });
+  p.erledigt = true; p.erledigtAm = now;
+  save(); route(); toast("Projekt abgeschlossen ✓");
+}
+function projektLoeschen(p) {
+  const teile = projektTodos(p);
+  const behalten = teile.filter(t => t.terminId), weg = teile.filter(t => !t.terminId);
+  let msg = `Projekt „${p.name}“ löschen?`;
+  if (weg.length) msg += `\n${weg.length === 1 ? "1 Teilaufgabe wird" : `${weg.length} Teilaufgaben werden`} mitgelöscht.`;
+  if (behalten.length) msg += `\n${behalten.length === 1 ? "1 Aufgabe aus einem Termin bleibt" : `${behalten.length} Aufgaben aus Terminen bleiben`} erhalten (ohne Projekt).`;
+  if (!confirm(msg)) return;
+  const ids = new Set(weg.map(t => t.id));
+  db.todos = db.todos.filter(t => !ids.has(t.id));
+  behalten.forEach(t => t.projektId = null);
+  db.termine.forEach(tt => tt.notizen.forEach(n => { if (ids.has(n.todoId)) n.todoId = null; }));
+  db.projekte = db.projekte.filter(x => x.id !== p.id);
+  save(); location.hash = "#/projekte"; toast("Projekt gelöscht");
+}
+function projektText(p) {
+  const k = kundeInfo(p);
+  const teile = projektTodos(p).sort((a, b) => a.erstellt - b.erstellt);
+  let s = `Projekt: ${p.name}${kundeText(k) ? ` (${kundeText(k)})` : ""}\n`;
+  if (p.faellig) s += `Fällig: ${parseLocal(p.faellig).toLocaleDateString("de-DE")}\n`;
+  if (p.notiz) s += `\n${p.notiz}\n`;
+  if (teile.length) s += `\n${teile.map(x => `${x.erledigt ? "☑" : "☐"} ${x.text}${x.wer.trim() ? ` → ${x.wer.trim()}` : ""}${x.faellig && !x.erledigt ? ` (bis ${fmtDate(x.faellig)})` : ""}`).join("\n")}\n`;
+  return s;
+}
 
 /* ---------- Ansicht: Termine ---------- */
 let search = "";
@@ -820,7 +1049,7 @@ const unescIcs = s => s.replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "$1");
 /* ---------- Ansicht: Mehr ---------- */
 function renderMehr(app) {
   const last = store.get(BACKUP_KEY);
-  const open = db.todos.filter(t => !t.erledigt).length;
+  const open = db.todos.filter(t => !t.erledigt && !imFertigenProjekt(t)).length;
   app.innerHTML = `<h1>Mehr</h1>
     <h2>Mitnehmen</h2>
     <div class="actions" style="margin-top:0">
@@ -853,7 +1082,7 @@ function renderMehr(app) {
     <h2>Installation</h2>
     <div class="card"><div class="info">In Safari auf <strong>Teilen</strong> → <strong>„Zum Home-Bildschirm“</strong> tippen. Starte die App immer über das Icon, nicht über einen Safari-Tab.</div></div>
     <h2>Statistik</h2>
-    <div class="card"><div class="info">${db.termine.length} Termine · ${db.todos.length} Aufgaben (${open} offen) · ${db.kunden.length} Kunden</div></div>
+    <div class="card"><div class="info">${db.termine.length} Termine · ${db.projekte.length} Projekte · ${db.todos.length} Aufgaben (${open} offen) · ${db.kunden.length} Kunden</div></div>
     <div class="actions"><button class="btn danger" id="wipe">Alle Daten löschen</button></div>`;
   app.querySelector("#shareOpen").onclick = () => shareText("Offene Aufgaben", openTodosText());
   app.querySelectorAll(".kunden [data-k]").forEach(inp => inp.onchange = () => {
@@ -862,7 +1091,7 @@ function renderMehr(app) {
     const alt = k.nr;
     if (!v || (lc(v) !== lc(alt) && kundeByNr(v))) { inp.value = alt; toast(v ? "Diese Kundennr. gibt es schon" : "Kundennr. darf nicht leer sein"); return; }
     // neue Nummer überall übernehmen
-    for (const x of [...db.todos, ...db.termine]) if (lc(x.kundeNr) === lc(alt)) x.kundeNr = v;
+    for (const x of [...db.todos, ...db.termine, ...db.projekte]) if (lc(x.kundeNr) === lc(alt)) x.kundeNr = v;
     k.nr = v; db.kunden.sort((a, b) => a.nr.localeCompare(b.nr, "de", { numeric: true }));
     save(); route(); toast("Kundennr. geändert");
   });
@@ -885,12 +1114,12 @@ function renderMehr(app) {
   app.querySelector("#backup").onclick = doBackup;
   app.querySelector("#restore").onclick = () => document.getElementById("importFile").click();
   app.querySelector("#wipe").onclick = () => {
-    if (!confirm("Wirklich ALLE Termine, Aufgaben und Kunden löschen? Das kann nicht rückgängig gemacht werden.")) return;
+    if (!confirm("Wirklich ALLE Termine, Projekte, Aufgaben und Kunden löschen? Das kann nicht rückgängig gemacht werden.")) return;
     db = migrate({ termine: [], todos: [] }); save(); route(); toast("Alle Daten gelöscht");
   };
 }
 function backupBanner() {
-  if (!db.termine.length && !db.todos.length) return "";
+  if (!db.termine.length && !db.todos.length && !db.projekte.length) return "";
   const last = +store.get(BACKUP_KEY) || 0;
   if (Date.now() - last < 14 * 864e5) return "";
   return `<div class="banner">💾 ${last ? "Letzte Sicherung ist über 14 Tage her." : "Noch keine Datensicherung."}
@@ -907,8 +1136,8 @@ document.getElementById("importFile").onchange = async e => {
   try {
     const d = JSON.parse(await f.text());
     if (!Array.isArray(d.termine) || !Array.isArray(d.todos)) throw new Error();
-    if (!confirm(`Backup vom ${d.exportiert ? new Date(d.exportiert).toLocaleDateString("de-DE") : "?"} laden?\n${d.termine.length} Termine, ${d.todos.length} Aufgaben.\nDie aktuellen Daten werden ersetzt.`)) return;
-    db = migrate({ termine: d.termine, todos: d.todos, einstellungen: d.einstellungen, kunden: d.kunden }); save(); route(); toast("Backup wiederhergestellt");
+    if (!confirm(`Backup vom ${d.exportiert ? new Date(d.exportiert).toLocaleDateString("de-DE") : "?"} laden?\n${d.termine.length} Termine, ${Array.isArray(d.projekte) ? d.projekte.length : 0} Projekte, ${d.todos.length} Aufgaben.\nDie aktuellen Daten werden ersetzt.`)) return;
+    db = migrate({ termine: d.termine, todos: d.todos, einstellungen: d.einstellungen, kunden: d.kunden, projekte: d.projekte }); save(); route(); toast("Backup wiederhergestellt");
   } catch (err) { toast("Keine gültige Backup-Datei"); }
 };
 
@@ -922,10 +1151,10 @@ function terminText(t) {
   return s;
 }
 function openTodosText() {
-  const open = db.todos.filter(t => !t.erledigt).sort(byPrio);
+  const open = db.todos.filter(t => !t.erledigt && !imFertigenProjekt(t)).sort(byPrio);
   let s = `Offene Aufgaben (Stand ${new Date().toLocaleDateString("de-DE")})\n`;
   for (const g of groupBy(open, kundeLabel, kundeKey))
-    s += `\n${g.name}:\n${g.items.map(t => `☐ ${t.wichtig ? "★ " : ""}${t.text}${t.wer.trim() ? ` → ${t.wer.trim()}` : ""}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n")}\n`;
+    s += `\n${g.name}:\n${g.items.map(t => `☐ ${t.wichtig ? "★ " : ""}${projektPrefix(t)}${t.text}${t.wer.trim() ? ` → ${t.wer.trim()}` : ""}${t.faellig ? ` (bis ${fmtDate(t.faellig)})` : ""}`).join("\n")}\n`;
   return s;
 }
 // Gibt true zurück, wenn geteilt oder kopiert wurde (false bei Abbruch/Fehler)
@@ -969,6 +1198,15 @@ function ics(t) {
 }
 
 /* ---------- Sheets (Formulare) ---------- */
+// Schnellknöpfe Heute / Morgen / Nächste Woche / ✕ für das Feld „faellig“
+function wireQuickdates(form) {
+  form.querySelectorAll("[data-due]").forEach(b => b.onclick = () => {
+    const d = b.dataset.due;
+    form.faellig.value = d === "" ? "" : d === "w" ? naechsteWoche() : inTagen(+d);
+  });
+}
+const QUICKDATES_HTML = `<div class="quickdates"><button type="button" class="btn small" data-due="0">Heute</button><button type="button" class="btn small" data-due="1">Morgen</button>
+      <button type="button" class="btn small" data-due="w">Nächste Woche</button><button type="button" class="btn small" data-due="" aria-label="Kein Datum">✕</button></div>`;
 const sheet = document.getElementById("sheet");
 sheet.addEventListener("click", e => { if (e.target === sheet) sheet.close(); });
 function openSheet(html, onSave) {
@@ -1036,14 +1274,48 @@ function terminSheet(t) {
     icsInput.click();
   };
 }
-function todoSheet(t, terminId) {
-  const tm = termin(t?.terminId || terminId);
-  const werList = [...new Set(db.todos.map(x => x.wer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
-  // Bei Aufgaben aus einem Termin: Termin-Kunde als Platzhalter – leer lassen = übernehmen
-  const erbt = tm ? { nr: (tm.kundeNr || "").trim(), name: kundeByNr(tm.kundeNr)?.name || tm.kunde || "" } : null;
+function projektSheet(p) {
   const form = openSheet(`
-    <div class="sheet-head"><button type="button" data-cancel>Abbrechen</button><strong>${t ? "Aufgabe" : "Neue Aufgabe"}</strong><button class="save">Sichern</button></div>
+    <div class="sheet-head"><button type="button" data-cancel>Abbrechen</button><strong>${p ? "Projekt bearbeiten" : "Neues Projekt"}</strong><button class="save">Sichern</button></div>
+    <label class="lbl">Projektname<input class="field" name="name" required value="${esc(p?.name)}" placeholder="z. B. Shopdesign" autocomplete="off" autocapitalize="sentences"></label>
+    <div class="two">
+      <label class="lbl">Kundennr.<input class="field" name="kundeNr" list="nrList" value="${esc(p?.kundeNr)}" placeholder="optional" autocomplete="off" autocapitalize="characters"></label>
+      <label class="lbl">Kunde<input class="field" name="kunde" list="kundeList" value="${esc(p ? p.kunde || kundeByNr(p.kundeNr)?.name || "" : "")}" placeholder="optional" autocomplete="off" autocapitalize="words"></label>
+    </div>
+    <datalist id="nrList">${kundenOptions()}</datalist>
+    <datalist id="kundeList">${kundenNamenOptions()}</datalist>
+    <label class="lbl">Fällig am (optional)<input class="field" name="faellig" type="date" value="${esc(p?.faellig)}"></label>
+    ${QUICKDATES_HTML}
+    <label class="lbl">Notiz (optional)<textarea class="field" name="notiz" rows="3" placeholder="z. B. Ansprechpartner, Links, Rahmen">${esc(p?.notiz)}</textarea></label>
+    <p class="hint">Teilaufgaben erben den Kunden des Projekts.</p>`,
+    f => {
+      const name = f.name.value.trim();
+      if (!name) return false;
+      const v = { name, ...kundeAusForm(f.kundeNr.value, f.kunde.value), faellig: f.faellig.value, notiz: f.notiz.value.trim() };
+      if (p) { Object.assign(p, v); save(); route(); return; }
+      const n = { id: uid(), ...v, erledigt: false, erledigtAm: null, erstellt: Date.now() };
+      db.projekte.push(n); save(); location.hash = `#/projekt/${n.id}`;
+      setTimeout(() => document.getElementById("teilText")?.focus(), 50);
+    });
+  wireKundeFelder(form);
+  wireQuickdates(form);
+  if (!p) form.name.focus();
+}
+function todoSheet(t, terminId, projektId) {
+  const tm = termin(t?.terminId || terminId);
+  const pj = projekt(t ? t.projektId : projektId);
+  const werList = [...new Set(db.todos.map(x => x.wer.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  // Kunde vom Projekt bzw. Termin als Platzhalter – leer lassen = übernehmen
+  const erbtVon = p => p && hatKunde(p) ? kundeInfo(p) : null;
+  const erbtTermin = tm ? { nr: (tm.kundeNr || "").trim(), name: kundeByNr(tm.kundeNr)?.name || tm.kunde || "" } : null;
+  const erbtFuer = pid => erbtVon(projekt(pid)) || erbtTermin;
+  const erbt = erbtFuer(pj?.id);
+  const projektListe = db.projekte.filter(p => !p.erledigt || p.id === pj?.id).sort((a, b) => a.name.localeCompare(b.name, "de"));
+  const form = openSheet(`
+    <div class="sheet-head"><button type="button" data-cancel>Abbrechen</button><strong>${t ? "Aufgabe" : pj ? "Neue Teilaufgabe" : "Neue Aufgabe"}</strong><button class="save">Sichern</button></div>
     <label class="lbl">Was ist zu tun?<textarea class="field" name="text" required rows="2">${esc(t?.text)}</textarea></label>
+    ${projektListe.length ? `<label class="lbl">Projekt<select class="field" name="projektId"><option value="">– kein Projekt –</option>
+      ${projektListe.map(p => `<option value="${p.id}" ${p.id === pj?.id ? "selected" : ""}>${esc(p.name)}${p.erledigt ? " (abgeschlossen)" : ""}</option>`).join("")}</select></label>` : ""}
     <div class="two">
       <label class="lbl">Kundennr.<input class="field" name="kundeNr" list="nrList" value="${esc(t?.kundeNr)}" placeholder="${esc(erbt?.nr || "optional")}" autocomplete="off" autocapitalize="characters"></label>
       <label class="lbl">Kunde<input class="field" name="kunde" list="kundeList" value="${esc(t?.kunde)}" placeholder="${esc(erbt?.name || "optional")}" autocomplete="off" autocapitalize="words"></label>
@@ -1054,8 +1326,7 @@ function todoSheet(t, terminId) {
       <label class="lbl">Wer / Abteilung<input class="field" name="wer" list="werList" value="${esc(t?.wer)}" placeholder="leer = ich" autocomplete="off" autocapitalize="words"></label>
       <label class="lbl">Fällig am<input class="field" name="faellig" type="date" value="${esc(t?.faellig)}"></label>
     </div>
-    <div class="quickdates"><button type="button" class="btn small" data-due="0">Heute</button><button type="button" class="btn small" data-due="1">Morgen</button>
-      <button type="button" class="btn small" data-due="w">Nächste Woche</button><button type="button" class="btn small" data-due="" aria-label="Kein Datum">✕</button></div>
+    ${QUICKDATES_HTML}
     <datalist id="werList">${werList.map(w => `<option value="${esc(w)}">`).join("")}</datalist>
     <label class="chk"><input type="checkbox" class="check" name="wichtig" ${t?.wichtig ? "checked" : ""}><span>★ Wichtig</span></label>
     <label class="lbl" data-angefragt style="${t?.wer?.trim() ? "" : "display:none"}">Zuletzt angefragt / nachgehakt am
@@ -1066,39 +1337,29 @@ function todoSheet(t, terminId) {
     <label class="chk" data-geklaert style="${t?.rueckmeldung ? "" : "display:none"}"><input type="checkbox" class="check" name="geklaert" ${t?.geklaert ? "checked" : ""}>
       <span>Geklärt – Kunde muss noch informiert werden</span></label>
     <label class="lbl">Ergebnis / Antwort<textarea class="field" name="ergebnis" rows="2" placeholder="Was hast du in Erfahrung gebracht?">${esc(t?.ergebnis)}</textarea></label>
+    ${pj ? `<button type="button" class="linkrow" data-goto-projekt>Projekt: ${esc(pj.name)} ›</button>` : ""}
     ${tm ? `<button type="button" class="linkrow" data-goto>Termin: ${esc(tm.kunde)} · ${esc(fmtDate(tm.datum.slice(0, 10)))} ›</button>` : ""}
     ${t ? `<button type="button" class="btn danger" data-del>Aufgabe löschen</button>` : ""}`,
     f => {
-      let kundeNr = f.kundeNr.value.trim(), kunde = f.kunde.value.trim();
-      const perName = !kundeNr && kundeByName(kunde);
-      // bekannter Name → Nr. aus dem Stamm; neues Paar merken. Der Name kommt dann live aus dem Kundenstamm
-      if (perName) { kundeNr = perName.nr; kunde = ""; }
-      else if (kundeNr && kunde) { merkeKunde(kundeNr, kunde); kunde = ""; }
-      else if (kundeNr && kundeByNr(kundeNr)) kunde = "";
+      const { kundeNr, kunde } = kundeAusForm(f.kundeNr.value, f.kunde.value);
       const v = { text: f.text.value.trim(), wer: f.wer.value.trim(), faellig: f.faellig.value, ergebnis: f.ergebnis.value.trim(),
                   kundeNr, kunde, wichtig: f.wichtig.checked,
                   rueckmeldung: f.rueckmeldung.checked, geklaert: f.rueckmeldung.checked && f.geklaert.checked,
-                  angefragtAm: f.wer.value.trim() ? f.angefragtAm.value : "" };
+                  angefragtAm: f.wer.value.trim() ? f.angefragtAm.value : "",
+                  projektId: f.projektId ? (f.projektId.value || null) : (pj?.id || null) };
       if (!v.text) return false;
       if (t) Object.assign(t, v);
       else db.todos.push(newTodo({ ...v, terminId: terminId || null }));
       save(); route();
     });
-  // Kundennr. ↔ Name gegenseitig ergänzen
-  let nameAuto = false;
-  form.kundeNr.addEventListener("change", () => {
-    const k = kundeByNr(form.kundeNr.value);
-    if (k?.name && (!form.kunde.value.trim() || nameAuto)) { form.kunde.value = k.name; nameAuto = true; }
+  wireKundeFelder(form);
+  wireQuickdates(form);
+  // Projektwechsel: Platzhalter für den geerbten Kunden nachziehen
+  form.projektId?.addEventListener("change", () => {
+    const e = erbtFuer(form.projektId.value);
+    form.kundeNr.placeholder = e?.nr || "optional"; form.kunde.placeholder = e?.name || "optional";
   });
-  form.kunde.addEventListener("input", () => nameAuto = false);
-  form.kunde.addEventListener("change", () => {
-    const k = kundeByName(form.kunde.value);
-    if (k && !form.kundeNr.value.trim()) form.kundeNr.value = k.nr;
-  });
-  form.querySelectorAll("[data-due]").forEach(b => b.onclick = () => {
-    const d = b.dataset.due;
-    form.faellig.value = d === "" ? "" : d === "w" ? naechsteWoche() : inTagen(+d);
-  });
+  form.querySelector("[data-goto-projekt]")?.addEventListener("click", () => { sheet.close(); location.hash = `#/projekt/${pj.id}`; });
   form.rueckmeldung.onchange = () => form.querySelector("[data-geklaert]").style.display = form.rueckmeldung.checked ? "" : "none";
   form.wer.addEventListener("input", () => form.querySelector("[data-angefragt]").style.display = form.wer.value.trim() ? "" : "none");
   form.querySelector("[data-heute]").onclick = () => form.angefragtAm.value = todayStr();
@@ -1116,6 +1377,8 @@ function todoSheet(t, terminId) {
 document.getElementById("app").addEventListener("click", e => {
   const open = e.target.closest("[data-open]");
   if (open) { location.hash = `#/termin/${open.dataset.open}`; return; }
+  const op = e.target.closest("[data-open-projekt]");
+  if (op) { location.hash = `#/projekt/${op.dataset.openProjekt}`; return; }
   const ask = e.target.closest("[data-ask]");
   if (ask) { const t = todo(ask.dataset.ask); const again = !!t.angefragtAm; t.angefragtAm = todayStr(); save(); route();
     toast(again ? "Nachgehakt – Frist läuft neu" : "Als angefragt markiert"); return; }
